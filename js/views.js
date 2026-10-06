@@ -134,7 +134,7 @@
         terugroep: () => { body.innerHTML = recallTab(data); },
         milieu: () => { body.innerHTML = fuelTab(data); },
         techniek: () => { body.innerHTML = techTab(data); },
-        vergelijk: () => { modelAnalysis(body, defaultModelFilter(s), s); },
+        vergelijk: () => { body.innerHTML = U.loading('Vergelijkgroep bepalen…'); resolvePeerFilter(s).then(f => modelAnalysis(body, f, s)); },
         data: () => { body.innerHTML = rawTab(data, k); },
       }[t] || (() => {}))();
       body.querySelectorAll('[data-goto]').forEach(a => a.addEventListener('click', ev => { ev.preventDefault(); show(a.dataset.goto); }));
@@ -309,17 +309,85 @@
 
   /* ---------- Modelanalyse / vergelijken met hetzelfde type ---------- */
 
-  function defaultModelFilter(s) {
-    return {
-      merk: s.v.merk || '', model: s.v.handelsbenaming || '',
-      van: s.bouwjaar ? s.bouwjaar - 1 : '', tot: s.bouwjaar ? s.bouwjaar + 1 : '',
-    };
+  /* Generatie herkennen via de typegoedkeuring: "e2*2001/116*0293*15" -> "e2*2001/116*0293".
+   * Het laatste deel is een uitbreiding (facelift, nieuwe motor); een nieuwe generatie krijgt
+   * een nieuw basisnummer. Eén generatie kan wel meerdere basisnummers hebben (bijv. per carrosserie). */
+  function tgkBase(v) {
+    if (!v) return '';
+    const parts = String(v).trim().split('*');
+    return parts.length >= 4 ? parts.slice(0, 3).join('*') : String(v).trim();
+  }
+
+  const MIN_GROEP = 30;
+
+  /* Kies de vergelijkgroep voor een auto, van zo precies mogelijk naar ruimer:
+   * 1) zelfde generatie + bouwjaar ±2, 2) zelfde generatie, 3) bouwjaar ±1, 4) hele model. */
+  function resolvePeerFilter(s) {
+    if (s._peer) return s._peer;
+    const base = { merk: s.v.merk || '', model: s.v.handelsbenaming || '' };
+    const b = s.bouwjaar;
+    const tgk = tgkBase(s.v.typegoedkeuringsnummer);
+    const gen = tgk ? { tgk } : s.v.type ? { type: s.v.type } : null;
+    const genTxt = tgk ? 'zelfde generatie (typegoedkeuring ' + tgk + ')' : 'zelfde type (' + s.v.type + ')';
+    const cands = [];
+    if (gen && b) cands.push({ ...base, ...gen, van: b - 2, tot: b + 2, groep: `${genTxt}, bouwjaar ${b - 2}–${b + 2}` });
+    if (gen) cands.push({ ...base, ...gen, van: '', tot: '', groep: `${genTxt}, alle bouwjaren` });
+    if (b) cands.push({ ...base, van: b - 1, tot: b + 1, groep: `bouwjaar ${b - 1}–${b + 1} (generatie onbekend)` });
+    cands.push({ ...base, van: '', tot: '', groep: 'alle bouwjaren' });
+    s._peer = (async () => {
+      let fallback = cands[cands.length - 1];
+      for (const f of cands) {
+        try {
+          const r = await RDW.query('voertuig', { $select: 'count(*) as n', $where: modelWhere(f, true) });
+          const n = num(r[0] && r[0].n) || 0;
+          if (n > MIN_GROEP) return f;          // > want de auto zelf telt mee
+          if (n > 1 && fallback === cands[cands.length - 1]) fallback = f;
+        } catch (e) { /* volgende proberen */ }
+      }
+      return fallback;
+    })();
+    return s._peer;
+  }
+
+  /* Generaties/uitvoeringen van een model, met de jaren waarin ze vooral geregistreerd zijn. */
+  async function generations(f) {
+    const where = modelWhere({ merk: f.merk, model: f.model }, false);
+    const sel = (cols) => ({ $select: cols + ', date_extract_y(datum_eerste_toelating_dt) as jaar, count(*) as n', $where: where, $group: cols + ', jaar', $limit: 50000 });
+    let rows;
+    try { rows = await RDW.query('voertuig', sel('typegoedkeuringsnummer, type')); }
+    catch (e) { rows = await RDW.query('voertuig', sel('typegoedkeuringsnummer')); }
+    const groups = {};
+    let total = 0;
+    for (const r of rows) {
+      const n = num(r.n) || 0;
+      const tgk = tgkBase(r.typegoedkeuringsnummer);
+      const key = tgk || (r.type ? 'type:' + r.type : 'onbekend');
+      const g = groups[key] = groups[key] || { key, tgk, type: r.type || '', types: new Set(), years: {}, n: 0 };
+      if (r.type) g.types.add(r.type);
+      if (r.jaar) g.years[r.jaar] = (g.years[r.jaar] || 0) + n;
+      g.n += n; total += n;
+    }
+    const list = Object.values(groups).map(g => {
+      // Jaren waarin 90% van de auto's geregistreerd is (5e–95e percentiel): imports/naregistraties tellen dan niet mee.
+      const ys = Object.keys(g.years).map(Number).sort((a, b) => a - b);
+      const sum = ys.reduce((a, y) => a + g.years[y], 0);
+      let acc = 0, p5 = null, p95 = null;
+      for (const y of ys) {
+        acc += g.years[y];
+        if (p5 == null && acc >= sum * 0.05) p5 = y;
+        if (p95 == null && acc >= sum * 0.95) p95 = y;
+      }
+      return { ...g, types: [...g.types], van: p5, tot: p95, min: ys[0], max: ys[ys.length - 1], share: total ? g.n / total : 0 };
+    }).filter(g => g.share >= 0.005 || g.n >= 50).sort((a, b) => (a.van || 9999) - (b.van || 9999) || b.n - a.n);
+    return { list, total };
   }
 
   function modelWhere(f, withYears) {
     const parts = [];
     if (f.merk) parts.push('merk=' + RDW.lit(f.merk.toUpperCase()));
     if (f.model) parts.push('handelsbenaming=' + RDW.lit(f.model.toUpperCase()));
+    if (withYears && f.tgk) parts.push('typegoedkeuringsnummer like ' + RDW.lit(f.tgk + '*%'));
+    else if (withYears && f.type) parts.push('type=' + RDW.lit(f.type));
     if (withYears && f.van) parts.push(`datum_eerste_toelating_dt>='${f.van}-01-01T00:00:00'`);
     if (withYears && f.tot) parts.push(`datum_eerste_toelating_dt<='${f.tot}-12-31T23:59:59'`);
     return parts.join(' AND ');
@@ -332,21 +400,55 @@
       <h2>${self ? 'Vergelijk met hetzelfde type' : 'Modelanalyse'}</h2>
       <p class="sub">Statistieken over alle geregistreerde voertuigen van dit merk en model in Nederland, en APK-gebreken over een steekproef van ${SAMPLE} auto's.</p>
       <form class="form-row" id="modelForm">
+        <input type="hidden" name="tgk" value="${esc(f.tgk || '')}"><input type="hidden" name="type" value="${esc(f.tgk ? '' : f.type || '')}">
         <label class="field">Merk<input name="merk" value="${esc(f.merk)}" placeholder="bijv. VOLKSWAGEN" required></label>
         <label class="field">Model<input name="model" value="${esc(f.model)}" placeholder="bijv. GOLF"></label>
         <label class="field">Bouwjaar van<input name="van" type="number" min="1900" max="2100" value="${esc(f.van)}"></label>
         <label class="field">tot<input name="tot" type="number" min="1900" max="2100" value="${esc(f.tot)}"></label>
         <button class="btn">Analyseer</button>
-      </form></section><div id="modelOut"></div>`;
+      </form>
+      ${f.tgk || f.type ? `<p class="gen-chip-row"><span class="gen-chip">Alleen ${f.tgk ? 'generatie ' + esc(f.tgk) : 'type ' + esc(f.type)} <button type="button" id="genClear" title="Alle generaties">✕</button></span></p>` : ''}
+      ${f.groep ? `<p class="small muted">Automatisch gekozen vergelijkgroep: ${esc(f.groep)}.</p>` : ''}
+      </section><div id="genOut"></div><div id="modelOut"></div>`;
     const form = el.querySelector('#modelForm');
     const out = el.querySelector('#modelOut');
-    form.addEventListener('submit', ev => {
-      ev.preventDefault();
-      const nf = Object.fromEntries(new FormData(form));
-      if (!self) location.hash = '#/model?' + new URLSearchParams(nf).toString();
-      else runModelAnalysis(out, nf, self);
-    });
+    const run = (nf) => {
+      if (!self) location.hash = '#/model?' + new URLSearchParams(Object.entries(nf).filter(([, v]) => v !== '' && v != null)).toString();
+      else modelAnalysis(el, nf, self);
+    };
+    form.addEventListener('submit', ev => { ev.preventDefault(); run(Object.fromEntries(new FormData(form))); });
+    const clear = el.querySelector('#genClear');
+    if (clear) clear.addEventListener('click', () => run({ ...Object.fromEntries(new FormData(form)), tgk: '', type: '' }));
+    if (f.merk && f.model) renderGenerations(el.querySelector('#genOut'), f, self, run);
     if (f.merk) runModelAnalysis(out, f, self);
+  }
+
+  async function renderGenerations(el, f, self, run) {
+    el.innerHTML = U.loading('Generaties opzoeken…');
+    let g;
+    try { g = await generations(f); } catch (e) { el.innerHTML = ''; return; }
+    if (!g.list.length) { el.innerHTML = ''; return; }
+    const selfKey = self ? (tgkBase(self.v.typegoedkeuringsnummer) || (self.v.type ? 'type:' + self.v.type : '')) : '';
+    const activeKey = f.tgk || (f.type ? 'type:' + f.type : '');
+    el.innerHTML = `<section class="card"><h2>Generaties en uitvoeringen van de ${esc(f.model.toUpperCase())}</h2>
+      <p class="sub">Herkend aan de Europese typegoedkeuring. Jaren = waarin 90% van deze auto's voor het eerst op kenteken kwam (later geïmporteerde exemplaren tellen niet mee).</p>
+      <div class="table-wrap"><table class="data gens"><thead><tr><th>Vooral gebouwd</th><th class="num">Aantal</th><th>Type</th><th>Typegoedkeuring</th><th></th></tr></thead><tbody>
+      ${g.list.map(x => `<tr class="${x.key === activeKey ? 'active' : ''}">
+        <td><b>${x.van && x.tot ? (x.van === x.tot ? x.van : x.van + '–' + x.tot) : '?'}</b>${x.min && x.max && (x.min < x.van || x.max > x.tot) ? ` <span class="muted small">(${x.min}–${x.max})</span>` : ''}
+          ${x.key === selfKey ? ' <span class="badge ok">deze auto</span>' : ''}</td>
+        <td class="num">${fmtNum(x.n)}</td><td>${esc(x.types.join(', '))}</td><td><code>${esc(x.tgk || '–')}</code></td>
+        <td>${x.key === activeKey ? '<span class="muted small">geselecteerd</span>' : `<button class="btn ghost btn-sm" data-key="${esc(x.key)}">Alleen deze</button>`}</td></tr>`).join('')}
+      </tbody></table></div></section>`;
+    el.querySelectorAll('[data-key]').forEach(b => b.addEventListener('click', () => {
+      const x = g.list.find(i => i.key === b.dataset.key);
+      run({ merk: f.merk, model: f.model, tgk: x.tgk, type: x.tgk ? '' : x.type, van: '', tot: '' });
+    }));
+  }
+
+  function describeFilter(f) {
+    const gen = f.tgk ? 'generatie ' + f.tgk : f.type ? 'type ' + f.type : '';
+    const jr = f.van || f.tot ? `bouwjaar ${f.van || '…'}–${f.tot || '…'}` : 'alle bouwjaren';
+    return [gen, jr].filter(Boolean).join(', ');
   }
 
   async function safe(p) { try { return await p; } catch (e) { return { error: e.message }; } }
@@ -419,9 +521,9 @@
 
     const jaarItems = perJaar.error ? [] : perJaar.filter(r => r.jaar).map(r => ({ x: r.jaar, n: num(r.n), hl: self && +r.jaar === self.bouwjaar }));
     const kleurItems = perKleur.error ? count('eerste_kleur') : perKleur.filter(r => r.eerste_kleur).map(r => ({ name: r.eerste_kleur, n: num(r.n), hl: self && r.eerste_kleur === self.v.eerste_kleur }));
-    const label = [f.merk, f.model].filter(Boolean).join(' ').toUpperCase() + (f.van || f.tot ? ` (${f.van || '…'}–${f.tot || '…'})` : '');
+    const label = [f.merk, f.model].filter(Boolean).join(' ').toUpperCase() + (f.van || f.tot ? ` (${f.van || '…'}–${f.tot || '…'})` : '') + (f.tgk || f.type ? ', zelfde generatie' : '');
 
-    return { f, self, sample, total, totalAll, prijs, massa, apkVerlopen, export_, terugroep, onlogisch, count,
+    return { f, self, groep: f.groep || describeFilter(f), sample, total, totalAll, prijs, massa, apkVerlopen, export_, terugroep, onlogisch, count,
       gebrekTop, omschr, others, gPer, kPer, totG, totK, modelGpk, zonderGebreken, metKeuring,
       fuelCount, co2, kw, verbruik, jaarItems, kleurItems, label };
   }
@@ -454,7 +556,7 @@
         ${row('Verbruik (l/100km)', self.verbruik, verbruik, x => fmtNum(x, 1), true)}
         ${row('Massa rijklaar (kg)', num(self.v.massa_rijklaar), massa, x => fmtNum(x), null)}
         </tbody></table></div>
-        <p class="small muted">Gemiddelden over voertuigen van hetzelfde merk/model en bouwjaar ${esc(f.van)}–${esc(f.tot)}. APK-gegevens uit een steekproef van ${others.length} kentekens.</p></section>`;
+        <p class="small muted">Vergeleken met: ${esc([f.merk, f.model].join(' '))}, ${esc(f.groep || describeFilter(f))} (${fmtNum(total)} auto's). APK-gegevens uit een steekproef van ${others.length} kentekens.</p></section>`;
     }
 
     out.innerHTML = `
@@ -615,5 +717,5 @@
     el.querySelector('#plate').focus();
   }
 
-  window.Views = { homePage, kentekenPage, comparePage, modelAnalysis, datasetsPage, summarize, computeModelStats, defaultModelFilter, gebrekMap };
+  window.Views = { homePage, kentekenPage, comparePage, modelAnalysis, datasetsPage, summarize, computeModelStats, resolvePeerFilter, describeFilter, tgkBase, gebrekMap };
 })();

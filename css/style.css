@@ -382,3 +382,8 @@ footer { text-align: center; color: var(--muted); font-size: 13px; padding: 24px
   .card, .stat { break-inside: avoid; border-color: #ccc; }
   main { padding: 0; }
 }
+.gen-chip-row { margin: 14px 0 0; }
+.gen-chip { display: inline-flex; align-items: center; gap: 8px; background: var(--yellow); color: #111; border: 1.5px solid var(--ink); border-radius: 999px; padding: 4px 6px 4px 12px; font-weight: 600; font-size: 14px; }
+.gen-chip button { border: 0; background: var(--ink); color: var(--yellow); width: 22px; height: 22px; border-radius: 50%; cursor: pointer; font-size: 11px; }
+.btn-sm { min-height: 32px; padding: 0 12px; font-size: 13px; border-radius: 9px; }
+table.gens tr.active td { background: var(--yellow-soft); }

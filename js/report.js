@@ -176,7 +176,7 @@
 
   function compute(s, data) {
     if (!s._report) {
-      s._report = Views.computeModelStats(Views.defaultModelFilter(s), s)
+      s._report = Views.resolvePeerFilter(s).then(f => Views.computeModelStats(f, s))
         .catch(() => null)
         .then(st => score(s, data, st && !st.error && !st.empty ? st : null));
     }
@@ -271,7 +271,7 @@
             : '<p class="muted">Geen mankementen gevonden bij de APK. 👍</p>'}
         </section>
         <section class="card"><h2>Vergeleken met andere ${esc(model)}s</h2>
-          ${st ? `<p class="sub">Uit dezelfde jaren (${esc(st.f.van)}–${esc(st.f.tot)}). Er rijden er ${fmtNum(st.total)} van in Nederland.</p>
+          ${st ? `<p class="sub">Vergeleken met ${fmtNum(st.total)} auto's: ${esc(st.groep)}.</p>
             <div class="vs">
               <div class="vs-label">Mankementen per APK</div>${cmp(s.gebrekenPerKeuring, st.modelGpk, true, x => fmtNum(x, 1)) || '<div class="muted">onbekend</div>'}
               <div class="vs-label">Nieuwprijs</div>${cmp(num(s.v.catalogusprijs), st.prijs, null, U.fmtEuro) || '<div class="muted">onbekend</div>'}
