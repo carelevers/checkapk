@@ -2,7 +2,8 @@
 
 CheckAPK is een statische webapp: HTML, CSS en JavaScript-modules, zonder build-stap en zonder
 backend. De browser haalt alle gegevens rechtstreeks op bij de
-[RDW Open Data API](https://opendata.rdw.nl) (Socrata). Optioneel praat "Vraag het" met een lokale AI
+[RDW Open Data API](https://opendata.rdw.nl) (Socrata). Voorbeeldfoto's komen van
+[Wikimedia Commons](https://commons.wikimedia.org) (`src/api/commons.js`), met naamsvermelding per foto. Optioneel praat "Vraag het" met een lokale AI
 via [Ollama](https://ollama.com).
 
 ## Mappen
@@ -21,7 +22,7 @@ src/
   router.js           Hash-routes (#/k/…, #/vraag, …) → render-functies
   config.js           Instellingen met standaardwaarden (leest /config.js)
   lib/                Algemene hulpjes zonder kennis van auto's (opmaak, opslag, CSV)
-  api/                Toegang tot de RDW API (client, datasetlijst, alle data van één kenteken)
+  api/                Externe bronnen: RDW API (client, datasets, één kenteken) en Wikimedia Commons (foto's)
   domain/             Pure logica over auto's: kentekens, gebreken, generaties, rapportcijfer
   services/           Combineert api + domain: modelstatistieken, vergelijkgroep, rapport
   ui/                 Herbruikbare HTML-bouwstenen en grafieken

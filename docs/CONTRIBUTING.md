@@ -16,7 +16,7 @@ npm run check     # typecontrole van alle JSDoc-types met TypeScript (downloadt 
 ```
 
 Open daarnaast de belangrijkste schermen en kijk in de browserconsole (F12) of er fouten zijn:
-startpagina, een kenteken (alle tabbladen), "Auto's vergelijken", "Model bekijken" en "Vraag het".
+startpagina, een kenteken (alle tabbladen), "Model bekijken" en "Vraag het".
 
 ## Codestijl
 

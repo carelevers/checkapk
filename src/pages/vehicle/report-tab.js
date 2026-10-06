@@ -59,7 +59,7 @@ export async function renderReportTab(el, { s, data }) {
         <p class="lead">${summaryLine(s, r)}</p>
         <div class="report-actions">
           <button class="btn" data-action="print">Print / opslaan als PDF</button>
-          <a class="btn ghost" href="#/vergelijk/${esc(s.kenteken)}">Vergelijk met andere auto</a>
+          <a class="btn ghost" href="#" data-goto="vergelijk">Vergelijk met andere ${esc(model)}s</a>
         </div>
       </div>
     </section>

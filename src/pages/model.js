@@ -10,6 +10,8 @@ import { fmtEuro, fmtNum, num } from '../lib/format.js';
 import { computeModelStats, fetchGenerations, filterGenerationKey, generationKey } from '../services/model-stats.js';
 import { barChart, columnChart } from '../ui/charts.js';
 import { dataTable, errorBox, esc, loading, statTile } from '../ui/html.js';
+import { findCarPhotos } from '../api/commons.js';
+import { bindGallery, galleryHtml } from '../ui/gallery.js';
 
 /** @typedef {import('../domain/generation.js').PeerFilter} PeerFilter */
 /** @typedef {import('../domain/vehicle-summary.js').VehicleSummary} VehicleSummary */
@@ -39,6 +41,7 @@ export function renderModelAnalysis(el, f, self) {
     </form>
     ${f.tgk || f.type ? `<p class="gen-chip-row"><span class="gen-chip">Alleen ${f.tgk ? 'generatie ' + esc(f.tgk) : 'type ' + esc(f.type)} <button type="button" data-gen-clear title="Alle generaties">✕</button></span></p>` : ''}
     ${f.groep ? `<p class="small muted">Automatisch gekozen vergelijkgroep: ${esc(f.groep)}.</p>` : ''}
+    <div data-model-photos></div>
     </section><div data-gen-out></div><div data-model-out></div>`;
 
   const form = /** @type {HTMLFormElement} */ (el.querySelector('[data-model-form]'));
@@ -50,8 +53,19 @@ export function renderModelAnalysis(el, f, self) {
   form.addEventListener('submit', (ev) => { ev.preventDefault(); run(Object.fromEntries(new FormData(form))); });
   el.querySelector('[data-gen-clear]')?.addEventListener('click', () => run({ ...Object.fromEntries(new FormData(form)), tgk: '', type: '' }));
 
+  if (f.merk && f.model && !self) renderModelPhotos(/** @type {HTMLElement} */ (el.querySelector('[data-model-photos]')), f);
   if (f.merk && f.model) renderGenerations(/** @type {HTMLElement} */ (el.querySelector('[data-gen-out]')), f, self, run);
   if (f.merk) renderStats(/** @type {HTMLElement} */ (el.querySelector('[data-model-out]')), f, self);
+}
+
+/** Fotostrip van het model (bouwjaar = midden van het gekozen bereik). */
+async function renderModelPhotos(el, f) {
+  const van = Number(f.van) || 0, tot = Number(f.tot) || 0;
+  const year = van && tot ? Math.round((van + tot) / 2) : van || tot || null;
+  const photos = (await findCarPhotos({ merk: f.merk.toUpperCase(), model: f.model, year }, 6)).slice(0, 6);
+  if (!photos.length || !el.isConnected) return;
+  el.innerHTML = `<div class="gallery-strip">${galleryHtml(photos, { note: 'Voorbeeldfoto\'s van Wikimedia Commons. Klik voor bron en maker.' })}</div>`;
+  bindGallery(el, photos);
 }
 
 /** Tabel met generaties; "Alleen deze" filtert op die generatie. */

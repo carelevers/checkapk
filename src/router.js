@@ -3,7 +3,6 @@
  * en een menu-item. Een nieuwe pagina toevoegen: zie docs/CONTRIBUTING.md.
  */
 import { renderAskPage } from './pages/ask.js';
-import { renderComparePage } from './pages/compare.js';
 import { renderDatasetsPage } from './pages/datasets.js';
 import { renderHomePage } from './pages/home.js';
 import { renderModelPage } from './pages/model.js';
@@ -20,7 +19,6 @@ import { setHeaderPlate } from './ui/plate-search.js';
 /** @type {Route[]} */
 const ROUTES = [
   { path: 'k', nav: 'home', render: (el, [kenteken, tab]) => (kenteken ? renderVehiclePage(el, { kenteken, tab }) : renderHomePage(el)) },
-  { path: 'vergelijk', nav: 'vergelijk', render: (el, [list]) => renderComparePage(el, { list }) },
   { path: 'model', nav: 'model', render: (el, _, q) => renderModelPage(el, q) },
   { path: 'vraag', nav: 'vraag', render: (el, _, q) => renderAskPage(el, q) },
   { path: 'datasets', nav: 'datasets', render: (el, _, q) => renderDatasetsPage(el, q) },

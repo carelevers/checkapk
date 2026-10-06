@@ -242,8 +242,30 @@ table.gens tr.active td { background: var(--yellow-soft); }
 .timing { margin: 14px 0 0; font-family: var(--font-mono); font-size: 12px; }
 
 /* Tabbladen op smalle schermen: één scrollbare rij in plaats van meerdere regels */
-@media (max-width: 700px) {
+@media (max-width: 1100px) {
   .subtabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 4px -16px 18px; padding: 0 16px 4px; }
   .subtabs::-webkit-scrollbar { display: none; }
   .subtabs button { flex: none; }
+}
+
+/* ---------- Foto's ---------- */
+.hero-card { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 26px; align-items: center; }
+.hero-card:has(.vehicle-photo[hidden]) { grid-template-columns: minmax(0, 1fr); }
+.vehicle-photo { position: relative; display: grid; gap: 8px; }
+.vehicle-photo button { padding: 0; border: 0; background: var(--surface-2); cursor: zoom-in; border-radius: 14px; overflow: hidden; display: block; }
+.vehicle-photo img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .4s cubic-bezier(.2, .7, .2, 1); }
+.vehicle-photo button:hover img { transform: scale(1.04); }
+.vp-main { aspect-ratio: 16 / 10; }
+.vp-thumbs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.vp-thumbs button { aspect-ratio: 4 / 3; border-radius: 10px; }
+.vp-more { display: grid; place-items: center; aspect-ratio: 4 / 3; border-radius: 10px; background: var(--surface-2); color: var(--text); font-weight: 700; text-decoration: none; }
+.vp-more:hover { background: var(--yellow); color: #111; }
+.vp-note { position: absolute; top: 8px; left: 8px; background: rgba(0, 0, 0, .55); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 999px; pointer-events: none; }
+@media (max-width: 860px) { .hero-card { grid-template-columns: minmax(0, 1fr); } }
+
+/* Hoofdmenu op smalle schermen: één scrollbare rij */
+@media (max-width: 560px) {
+  nav.tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; justify-content: flex-start; }
+  nav.tabs::-webkit-scrollbar { display: none; }
+  nav.tabs a { flex: none; }
 }

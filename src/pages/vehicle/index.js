@@ -9,11 +9,16 @@ import { errorBox, esc, loading } from '../../ui/html.js';
 import { plateHtml } from '../../ui/plate.js';
 import { setHeaderPlate } from '../../ui/plate-search.js';
 import { renderModelAnalysis } from '../model.js';
-import { vehicleHeaderHtml } from './header.js';
+import { renderHeaderPhotos, vehicleHeaderHtml } from './header.js';
+import { findCarPhotos } from '../../api/commons.js';
+import { bindGallery, galleryHtml } from '../../ui/gallery.js';
 import { renderReportTab, scorePillHtml } from './report-tab.js';
 import { apkTab, fuelTab, overviewTab, rawDataTab, recallsTab, specsTab } from './tabs.js';
 
 /** @typedef {import('./tabs.js').TabContext} TabContext */
+
+/** Voorbeeldfoto's van het model van deze auto (gecachet door findCarPhotos). @param {TabContext} ctx */
+const photosFor = ({ s }) => findCarPhotos({ merk: s.v.merk || '', model: s.v.handelsbenaming || '', year: s.bouwjaar });
 /**
  * @typedef {object} Tab
  * @property {string} id      deel van de URL (#/k/KENTEKEN/id)
@@ -34,10 +39,20 @@ const TABS = [
   { id: 'milieu', label: 'Verbruik & milieu', render: html(fuelTab) },
   { id: 'techniek', label: 'Specificaties', render: html(specsTab) },
   {
-    id: 'vergelijk', label: 'Vergelijk met zelfde type',
+    id: 'vergelijk', label: 'Vergelijken',
     render: (el, { s }) => {
       el.innerHTML = loading('Vergelijkgroep bepalen…');
       resolvePeerFilter(s).then((f) => renderModelAnalysis(el, f, s));
+    },
+  },
+  {
+    id: 'fotos', label: 'Foto\'s',
+    render: (el, ctx) => {
+      el.innerHTML = loading('Foto\'s zoeken…');
+      photosFor(ctx).then((photos) => {
+        el.innerHTML = `<section class="card"><h2>Foto's van de ${esc(ctx.s.titel)}</h2>${galleryHtml(photos)}</section>`;
+        bindGallery(el, photos);
+      });
     },
   },
   { id: 'data', label: 'Alle gegevens', render: html(rawDataTab) },
@@ -91,6 +106,13 @@ export async function renderVehiclePage(el, { kenteken, tab }) {
     show(/** @type {HTMLElement} */ (a).dataset.goto || '');
   });
   show(tab || TABS[0].id);
+
+  photosFor(ctx).then((photos) => {
+    const slot = /** @type {HTMLElement|null} */ (res.querySelector('[data-vehicle-photo]'));
+    if (!slot) return;
+    renderHeaderPhotos(slot, photos);
+    bindGallery(slot, photos);
+  });
 
   getReport(s, data).then((r) => {
     const slot = res.querySelector('[data-score-pill]');

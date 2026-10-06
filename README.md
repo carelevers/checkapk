@@ -6,12 +6,12 @@ Een eigen "CarScanner": zoek elk Nederlands kenteken op en zie alles wat de
 ## Functies
 
 - **Rapportcijfer (1–10)**: elk kenteken krijgt automatisch een rapport met een eindcijfer, deelcijfers (APK-keuringen, kilometerstand, papieren & veiligheid, betrouwbaarheid van het model, leeftijd & eigenaar, milieu), plus- en minpunten in gewone taal, koopadvies en een print/PDF-knop. Het cijfer vergelijkt de auto met dezelfde **generatie** van hetzelfde model (herkend aan de Europese typegoedkeuring) en bouwjaar ±2; is die groep te klein, dan de hele generatie, en pas daarna bouwjaar ±1.
+- **Foto's**: voorbeeldfoto's van het model (bij voorkeur hetzelfde bouwjaar) van Wikimedia Commons, groot te bekijken, met naamsvermelding van de fotograaf.
 - **Kentekencheck**: merk/model, kleur, leeftijd, vermogen (kW/pk), catalogusprijs, BPM, gewichten, energielabel, WAM-status, export-, taxi- en tellerstandindicatoren.
 - **APK-historie**: tijdlijn van alle keuringsmeldingen (met nieuwe vervaldatum) en alle geconstateerde gebreken in leesbare tekst, plus gebreken per jaar en de meest voorkomende gebreken.
 - **Terugroepacties**: status per actie, met omschrijving, risico en oplossing.
 - **Milieu & brandstof / Techniek**: brandstof, verbruik, CO₂, euroklasse, actieradius (EV), carrosserie, assen, voertuigklasse, subcategorie en bijzonderheden.
 - **Zelfde type vergelijken**: hoe scoort deze auto ten opzichte van hetzelfde merk/model en bouwjaar? Aantallen op kenteken, gemiddelde catalogusprijs, gebreken per keuring, top-gebreken van het model, kleuren, brandstof, varianten en een lijst met vergelijkbare auto's.
-- **Kentekens naast elkaar**: tot vier auto's in één tabel; de beste waarde wordt groen.
 - **Generaties per model**: overzicht van alle generaties/uitvoeringen van een model met de jaren waarin ze vooral gebouwd zijn; klik er één aan om alleen die te analyseren.
 - **Modelanalyse**: dezelfde analyse, maar dan voor elk merk/model/bouwjaar zonder dat je een kenteken nodig hebt.
 - **Vraag het**: stel een vraag in gewone taal ("meest voorkomende mankementen van een Citroën C3 2010-2017", "vergelijk Yaris en Polo", "kleuren Golf vanaf 2020") en krijg direct grafieken uit het RDW-register, met CSV-download. Werkt zonder AI; met een lokale AI (zie hieronder) begrijpt hij vrijere vragen en schrijft hij een korte samenvatting.

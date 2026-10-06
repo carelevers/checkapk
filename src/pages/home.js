@@ -3,8 +3,8 @@ import { bindPlateSearch, plateSearchHtml } from '../ui/plate-search.js';
 
 const FEATURES = [
   ['#/', 'Rapportcijfer', 'Eén cijfer van 1 tot 10, met in gewone taal wat goed is en waar je op moet letten.'],
-  ['#/model', 'APK-geschiedenis', 'Elke keuring sinds 2018 en wat er gerepareerd moest worden. Beter of slechter dan andere auto\'s van hetzelfde type?'],
-  ['#/vergelijk', 'Auto\'s vergelijken', 'Twijfel je tussen een paar auto\'s? Zet ze naast elkaar en zie welke het beste scoort.'],
+  ['#/', 'APK-geschiedenis', 'Elke keuring sinds 2018 en wat er gerepareerd moest worden. Beter of slechter dan andere auto\'s van hetzelfde type?'],
+  ['#/model', 'Model bekijken', 'Hoeveel rijden er, welke generaties zijn er en wat gaat er vaak mis? Per model en bouwjaar.'],
   ['#/vraag', 'Vraag het', '"Meest voorkomende mankementen van een Citroën C3 2010-2017": typ je vraag en krijg direct grafieken.'],
 ];
 

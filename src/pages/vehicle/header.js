@@ -41,14 +41,28 @@ export function vehicleHeaderHtml(s) {
   const kleur = v.eerste_kleur && v.eerste_kleur !== 'N.v.t.' ? v.eerste_kleur : null;
   const meta = [v.voertuigsoort, v.inrichting, kleur, s.bouwjaar, s.brandstof].filter(Boolean).map(esc).join(' · ');
   return `<section class="card hero-card">
+    <div class="vehicle-photo" data-vehicle-photo hidden></div>
+    <div class="vehicle-info">
     <div class="vehicle-head">
       ${plateHtml(s.kenteken, 'lg')}
       <div class="vehicle-title"><h1>${esc(s.titel || 'Onbekend voertuig')}</h1><div class="meta">${meta}</div></div>
-      <div class="vehicle-actions">
-        <div class="score-pill-slot" data-score-pill></div>
-        <a class="btn ghost btn-sm" href="#/vergelijk/${esc(s.kenteken)}">+ Vergelijk</a>
-      </div>
+      <div class="vehicle-actions"><div class="score-pill-slot" data-score-pill></div></div>
     </div>
     <div class="badges">${statusBadges(s)}</div>
+    </div>
   </section>`;
+}
+
+/**
+ * Grote foto met miniaturen in de kop; klikken opent de galerij.
+ * @param {HTMLElement} slot @param {import('../../api/commons.js').Photo[]} photos
+ */
+export function renderHeaderPhotos(slot, photos) {
+  if (!photos.length) return;
+  const [main, ...rest] = photos;
+  slot.innerHTML = `<button class="vp-main" data-photo="0" aria-label="Foto vergroten"><img src="${esc(main.thumb)}" alt="${esc(main.title)}" decoding="async"></button>
+    ${rest.length ? `<div class="vp-thumbs">${rest.slice(0, 3).map((p, i) => `<button data-photo="${i + 1}" aria-label="Foto ${i + 2} vergroten"><img src="${esc(p.thumb)}" alt="" loading="lazy"></button>`).join('')}
+      ${photos.length > 4 ? `<a href="#" class="vp-more" data-goto="fotos">+${photos.length - 4}</a>` : ''}</div>` : ''}
+    <span class="vp-note">Voorbeeldfoto · Wikimedia Commons</span>`;
+  slot.hidden = false;
 }

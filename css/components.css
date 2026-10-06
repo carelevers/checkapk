@@ -266,13 +266,9 @@ table.data a { font-weight: 600; }
 
 .notice { background: var(--yellow-soft); border-radius: 14px; padding: 12px 16px; font-size: 14px; }
 
-.score-inline { display: inline-block; font: 800 18px/1 var(--font-display); padding: 5px 9px; border-radius: 9px; margin-right: 4px; }
 
-.score-inline.ok { background: var(--ok-soft); color: var(--ok); }
 
-.score-inline.warn { background: var(--warn-soft); color: var(--warn); }
 
-.score-inline.bad { background: var(--bad-soft); color: var(--bad); }
 
 .bar-fill.ok { background: var(--ok); }
 
@@ -291,3 +287,24 @@ table.data a { font-weight: 600; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .icon-btn--solid { background: var(--yellow); color: var(--yellow-ink); } }
 
 .field-wide { flex: 1; min-width: 220px; }
+
+/* ---------- Fotogalerij ---------- */
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.gallery-item { padding: 0; border: 0; border-radius: 12px; overflow: hidden; background: var(--surface-2); aspect-ratio: 4 / 3; cursor: zoom-in; }
+.gallery-item img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .4s cubic-bezier(.2, .7, .2, 1); }
+.gallery-item:hover img { transform: scale(1.05); }
+.gallery-note { margin: 10px 0 0; }
+.gallery-strip { margin-top: 18px; }
+.gallery-strip .gallery { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+
+.lightbox { border: 0; padding: 0; background: transparent; max-width: min(1200px, 94vw); max-height: 94vh; overflow: visible; }
+.lightbox::backdrop { background: rgba(10, 12, 16, .86); backdrop-filter: blur(4px); }
+.lightbox figure { margin: 0; display: grid; gap: 10px; }
+.lightbox img { display: block; max-width: 100%; max-height: 80vh; margin: 0 auto; border-radius: 12px; }
+.lightbox figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; color: #e8e4da; font-size: 13px; }
+.lightbox figcaption a { color: #f6bd00; }
+.lb-btn { position: fixed; border: 0; background: rgba(255, 255, 255, .14); color: #fff; width: 44px; height: 44px; border-radius: 50%; font-size: 22px; cursor: pointer; }
+.lb-btn:hover { background: rgba(255, 255, 255, .28); }
+.lb-close { top: 18px; right: 18px; font-size: 16px; }
+.lb-prev { left: 18px; top: 50%; }
+.lb-next { right: 18px; top: 50%; }
