@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CheckAPK – Kentekencheck</title>
+  <meta name="description" content="Eigen kentekencheck met de RDW Open Data API: voertuiggegevens, APK-historie, gebreken, terugroepacties en vergelijken met hetzelfde type auto.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='1' y='8' width='30' height='16' rx='3' fill='%23f7c600' stroke='%23111' stroke-width='2'/><rect x='2' y='9' width='5' height='14' fill='%231a3e93'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=Barlow+Condensed:wght@700&family=JetBrains+Mono:wght@500&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <a class="brand" href="#/"><span class="brand-plate">CHECK</span>APK</a>
+      <nav class="tabs">
+        <a href="#/" data-nav="home">Kenteken</a>
+        <a href="#/vergelijk" data-nav="vergelijk">Vergelijk kentekens</a>
+        <a href="#/model" data-nav="model">Modelanalyse</a>
+        <a href="#/datasets" data-nav="datasets">Datasets</a>
+      </nav>
+      <button class="theme-toggle" id="themeToggle" title="Licht/donker" aria-label="Wissel licht/donker thema"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg></button>
+    </div>
+  </header>
+
+  <main id="app"></main>
+
+  <footer>
+    Gegevens: <a href="https://opendata.rdw.nl" target="_blank" rel="noopener">RDW Open Data</a> (CC0).
+    Geen officiële RDW-dienst. De APK-historie in open data begint rond 2018 en bevat geen kilometerstanden per keuring.
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="js/rdw.js"></script>
+  <script src="js/util.js"></script>
+  <script src="js/views.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
