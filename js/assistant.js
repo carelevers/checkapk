@@ -5,7 +5,9 @@
 (function () {
   'use strict';
   const { esc, num, fmtNum, fmtEuro, parseDate } = U;
-  const AI = Object.assign({ enabled: true, url: 'http://localhost:11434', model: 'gpt-oss:20b' }, window.CHECKAPK_AI || {});
+  const AI = Object.assign({ enabled: true, url: 'http://localhost:11434', model: 'gpt-oss:20b', keepAlive: '30m', numCtx: 8192 }, window.CHECKAPK_AI || {});
+  // gpt-oss redeneert eerst: 'low' is sneller, 'high' grondiger. Standaard 'medium'.
+  const THINK = AI.think !== undefined ? AI.think : (/^gpt-oss/.test(AI.model) ? 'medium' : undefined);
 
   const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ').trim();
@@ -161,17 +163,53 @@
     return aiStatus;
   }
 
-  async function ollama(messages, format, timeoutMs) {
+  const aiOptions = () => ({ temperature: 0, num_ctx: AI.numCtx });
+
+  /* Model alvast in het geheugen laden, zodat de eerste vraag niet op het laden wacht. */
+  let warmP = null;
+  function warmUp() {
+    if (!warmP) {
+      warmP = fetch(AI.url + '/api/generate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: AI.model, keep_alive: AI.keepAlive, options: aiOptions() }),
+      }).then(r => r.ok).catch(() => false);
+    }
+    return warmP;
+  }
+
+  /* Chat met Ollama. Met onToken wordt het antwoord gestreamd (woord voor woord). */
+  async function ollama(messages, format, timeoutMs, onToken) {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), timeoutMs || 120000);
     try {
+      const body = { model: AI.model, stream: !!onToken, messages, format, keep_alive: AI.keepAlive, options: aiOptions() };
+      if (THINK !== undefined) body.think = THINK;
       const res = await fetch(AI.url + '/api/chat', {
-        method: 'POST', signal: ctl.signal, headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: AI.model, stream: false, messages, format, options: { temperature: 0 } }),
+        method: 'POST', signal: ctl.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error('AI gaf ' + res.status);
-      const j = await res.json();
-      return (j.message && j.message.content) || '';
+      if (!onToken) {
+        const j = await res.json();
+        return (j.message && j.message.content) || '';
+      }
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '', text = '';
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop();
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const j = JSON.parse(line);
+          const m = j.message || {};
+          if (m.content) { text += m.content; onToken(text, false); }
+          else if (m.thinking) onToken(text, true);
+        }
+      }
+      return text;
     } finally { clearTimeout(t); }
   }
 
@@ -254,7 +292,7 @@ Antwoord alleen met JSON.`;
   }
 
   async function perKenteken(key, kentekens, params) {
-    const parts = await Promise.all(chunk(kentekens, 150).map(ks =>
+    const parts = await Promise.all(chunk(kentekens, 300).map(ks =>
       RDW.query(key, { ...params, $where: 'kenteken in' + RDW.inList(ks) + (params.$where ? ' AND ' + params.$where : ''), $limit: 50000 })));
     return parts.flat();
   }
@@ -373,8 +411,7 @@ Antwoord alleen met JSON.`;
     return null;
   }
 
-  async function execute(plan) {
-    const sections = [];
+  function buildJobs(plan) {
     const subjects = plan.subjects.length ? plan.subjects : [null];
     let topics = plan.topics.length ? plan.topics : (plan.subjects.length ? (plan.subjects.every(s => !s.key) ? ['topmodellen', 'aantallen'] : ['aantallen', 'mankementen']) : []);
     const needsSubject = (t) => !['topmerken'].includes(t);
@@ -390,17 +427,42 @@ Antwoord alleen met JSON.`;
         return sec('Vergelijking: mankementen per APK-keuring', 'Lager is beter', U.bars(items, { fmt: x => fmtNum(x, 2) }), [['model', 'mankementen per keuring'], ...items.map(i => [i.name, i.n.toFixed(3)])]);
       }));
     }
-    const results = await Promise.all(jobs.map(j => j.catch(e => sec('Mislukt', '', U.errorBox(e.message)))));
-    for (const r of results) if (r) sections.push(...(Array.isArray(r) ? r : [r]));
-    return { sections, topics };
+    return jobs.map(j => j.catch(e => sec('Mislukt', '', U.errorBox(e.message))));
   }
 
-  async function aiSummary(question, sections) {
-    const facts = sections.filter(s => s.csv).map(s => s.title + ':\n' + s.csv.slice(1, 8).map(r => '- ' + r.join(': ')).join('\n')).join('\n\n');
+  /* Feiten voor de AI: nette namen, Nederlandse getallen en aandeel van het totaal. */
+  function factsFor(sections) {
+    const fmtV = (v) => (typeof v === 'number' || /^-?\d+(\.\d+)?$/.test(String(v))) ? fmtNum(Number(v), Number(v) % 1 ? 2 : 0) : (/^[A-Z0-9 \-.]+$/.test(String(v)) && /[A-Z]{2}/.test(String(v)) ? nice(v) : String(v));
+    return sections.filter(sc => sc.csv && sc.csv.length > 1).map(sc => {
+      const [head, ...rows] = sc.csv;
+      const share = head[1] === 'aantal';
+      const total = share ? rows.reduce((a, r) => a + (Number(r[1]) || 0), 0) : 0;
+      const lines = rows.slice(0, 12).map(r => '- ' + fmtV(r[0]) + ': ' + r.slice(1).map(fmtV).join(' / ') +
+        (share && total ? ` (${Math.round(Number(r[1]) / total * 100)}%)` : ''));
+      if (rows.length > 12) lines.push(`- … nog ${rows.length - 12} rijen`);
+      return `${sc.title}${sc.sub ? ' (' + sc.sub + ')' : ''}\nKolommen: ${head.join(' / ')}${share ? ' (percentage = aandeel binnen deze getoonde rijen, niet van alle auto\'s)' : ''}\n${lines.join('\n')}`;
+    }).join('\n\n');
+  }
+
+  const SUMMARY_SYSTEM = `Je bent een ervaren autokenner die een kort, nuttig antwoord schrijft voor een gewone autokoper.
+Regels:
+- Begin meteen met het antwoord op de vraag.
+- Noem hooguit 2 à 3 opvallende cijfers en rond ze af ("ruim 170.000", "ongeveer 4 op de 10"). Som NIET alle cijfers op.
+- Geef daarna één inzicht of praktische tip, alleen als die echt uit de cijfers volgt.
+- Maximaal 3 zinnen. Geen opsommingstekens, geen kopjes, geen markdown.
+- Schrijf namen normaal: "Kia Picanto", niet "KIA PICANTO".
+- Gebruik alleen de gegeven gegevens; verzin niets. Percentages bij een steekproef zijn schattingen: zeg dan "ongeveer".
+
+Voorbeeld
+Vraag: populairste modellen van Toyota
+Gegevens: Yaris: 300.000 (41%), Aygo: 150.000 (21%), Corolla: 90.000 (12%), …
+Antwoord: De Yaris is veruit de populairste Toyota in Nederland: ruim 4 op de 10 Toyota's op kenteken is een Yaris. Daarna volgen de Aygo en de Corolla. Zoek je een veelvoorkomende Toyota met veel aanbod en onderdelen, dan zit je met een Yaris goed.`;
+
+  async function aiSummary(question, sections, onToken) {
     return ollama([
-      { role: 'system', content: 'Je bent een behulpzame autokenner. Beantwoord de vraag in maximaal 3 korte zinnen in eenvoudig Nederlands. Gebruik ALLEEN de gegeven cijfers; verzin niets. Geen opsommingstekens.' },
-      { role: 'user', content: `Vraag: ${question}\n\nGegevens uit het RDW-register:\n${facts}` },
-    ], undefined, 180000);
+      { role: 'system', content: SUMMARY_SYSTEM },
+      { role: 'user', content: `Vraag: ${question}\n\nGegevens uit het RDW-register:\n${factsFor(sections)}` },
+    ], undefined, 300000, onToken);
   }
 
   /* ---------- Pagina ---------- */
@@ -441,7 +503,9 @@ Antwoord alleen met JSON.`;
     list.prepend(card);
     card.querySelector('.icon-btn').addEventListener('click', () => card.remove());
     const body = card.querySelector('.q-body');
+    const t0 = performance.now();
     const ai = await checkAI();
+    if (ai.ok) warmUp();
     let plan;
     try { plan = await understand(question, ai.ok); }
     catch (e) { body.innerHTML = U.errorBox('Kon de RDW-gegevens niet ophalen: ' + e.message); return; }
@@ -452,18 +516,48 @@ Antwoord alleen met JSON.`;
       bindExamples(card, el);
       return;
     }
-    body.innerHTML = `<div class="q-chips"><span class="muted small">Begrepen via ${esc(plan.via)}:</span>${chips(plan)}</div>${U.loading('Gegevens ophalen uit het RDW-register…')}`;
-    const { sections } = await execute(plan);
+    const tPlan = performance.now();
+    const jobs = buildJobs(plan);
     body.innerHTML = `<div class="q-chips"><span class="muted small">Begrepen via ${esc(plan.via)}:</span>${chips(plan)}</div>
-      ${ai.ok ? '<div class="ai-summary"><span class="ai-label">AI-samenvatting (' + esc(AI.model) + ')</span><div class="ai-text">' + U.loading('Samenvatting schrijven… (lokaal kan dit even duren)') + '</div></div>' : ''}
-      <div class="answer-grid">${sections.map((s, i) => `<div class="answer-sec">
-        <div class="sec-head"><h3>${esc(s.title)}</h3>${s.csv ? `<button class="btn ghost btn-sm" data-csv="${i}">CSV</button>` : ''}</div>
-        ${s.sub ? `<p class="sub">${esc(s.sub)}</p>` : ''}${s.html}</div>`).join('')}</div>`;
-    body.querySelectorAll('[data-csv]').forEach(b => b.addEventListener('click', () => { const s = sections[+b.dataset.csv]; downloadCsv(s.csv, s.title); }));
+      ${ai.ok ? '<div class="ai-summary"><span class="ai-label">AI-samenvatting (' + esc(AI.model) + ')</span><div class="ai-text">' + U.loading('Wacht op de RDW-gegevens…') + '</div></div>' : ''}
+      <div class="answer-grid">${jobs.map((_, i) => `<div class="answer-sec pending" data-job="${i}">${U.loading('Gegevens ophalen uit het RDW-register…')}</div>`).join('')}</div>
+      <p class="timing small muted"></p>`;
+    const timing = body.querySelector('.timing');
+    const sections = [];
+    const secHtml = (sc, i) => `<div class="sec-head"><h3>${esc(sc.title)}</h3>${sc.csv ? `<button class="btn ghost btn-sm" data-csv="${i}">CSV</button>` : ''}</div>
+      ${sc.sub ? `<p class="sub">${esc(sc.sub)}</p>` : ''}${sc.html}`;
+    // Elke grafiek tonen zodra hij binnen is
+    await Promise.all(jobs.map((job, ji) => job.then(r => {
+      const list = (Array.isArray(r) ? r : [r]).filter(Boolean);
+      const slot = body.querySelector(`[data-job="${ji}"]`);
+      if (!slot) return;
+      const els = list.map(sc => {
+        const i = sections.push(sc) - 1;
+        const d = document.createElement('div');
+        d.className = 'answer-sec fade-in';
+        d.innerHTML = secHtml(sc, i);
+        d.querySelectorAll('[data-csv]').forEach(b => b.addEventListener('click', () => downloadCsv(sc.csv, sc.title)));
+        return d;
+      });
+      slot.replaceWith(...els);
+    })));
+    const tData = performance.now();
+    const fmtS = (ms) => fmtNum(ms / 1000, 1) + ' s';
+    timing.textContent = `Vraag begrijpen: ${fmtS(tPlan - t0)} · RDW-gegevens: ${fmtS(tData - tPlan)}`;
+
     if (ai.ok) {
       const box = body.querySelector('.ai-text');
-      aiSummary(question, sections).then(t => { box.textContent = t.trim() || 'Geen samenvatting.'; })
-        .catch(() => { body.querySelector('.ai-summary').remove(); });
+      box.innerHTML = U.loading('AI denkt na…');
+      let first = null;
+      aiSummary(question, sections, (text, thinking) => {
+        if (thinking && !text) return;
+        if (first == null) first = performance.now();
+        box.textContent = text;
+      }).then(t => {
+        const tAi = performance.now();
+        if (!t.trim()) box.textContent = 'Geen samenvatting.';
+        timing.textContent += ` · AI: ${fmtS(tAi - tData)}` + (first ? ` (eerste woord na ${fmtS(first - tData)})` : '');
+      }).catch(e => { box.textContent = 'Samenvatting mislukt: ' + e.message; });
     }
   }
 
@@ -499,6 +593,11 @@ Antwoord alleen met JSON.`;
     checkAI().then(st => {
       const s = el.querySelector('#aiStatus');
       if (!s) return;
+      if (st.ok) {
+        s.innerHTML = `<span class="dot-off"></span>Lokale AI <b>${esc(AI.model)}</b> wordt geladen…`;
+        warmUp().then(ok => { s.innerHTML = ok ? `<span class="dot-on"></span>Lokale AI klaar: <b>${esc(AI.model)}</b>` : `<span class="dot-off"></span>Lokale AI <b>${esc(AI.model)}</b> kon niet laden.`; });
+        return;
+      }
       s.innerHTML = st.ok
         ? `<span class="dot-on"></span>Lokale AI actief: <b>${esc(AI.model)}</b>`
         : `<span class="dot-off"></span>Zonder AI (${esc(st.reason)}). Werkt prima; met een lokale AI begrijpt hij vrijere vragen. <a href="https://github.com/carelevers/checkapk#lokale-ai" target="_blank" rel="noopener">Zo zet je hem aan</a>.`;
@@ -507,5 +606,5 @@ Antwoord alleen met JSON.`;
     else el.querySelector('#q').focus();
   }
 
-  window.Assistant = { page, ruleParse, understand, parseYears, norm };
+  window.Assistant = { page, ruleParse, understand, parseYears, norm, factsFor };
 })();

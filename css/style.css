@@ -422,3 +422,5 @@ table.gens tr.active td { background: var(--yellow-soft); }
 .sec-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .sec-head h3 { margin: 0 0 6px; font-size: 16px; }
 .answer-sec .sub { margin: 0 0 12px; }
+.answer-sec.pending { min-height: 160px; display: flex; align-items: center; justify-content: center; }
+.timing { margin: 14px 0 0; font-family: var(--font-mono); font-size: 12px; }

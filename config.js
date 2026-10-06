@@ -13,4 +13,7 @@ window.CHECKAPK_AI = {
   enabled: true,
   url: 'http://localhost:11434',
   model: 'gpt-oss:20b',
+  keepAlive: '30m',  // zo lang blijft het model in het geheugen na de laatste vraag
+  numCtx: 8192,      // contextlengte; meer is niet nodig en maakt het trager
+  think: 'medium',   // alleen gpt-oss: 'low' (snelst) | 'medium' | 'high' (grondigst)
 };

@@ -65,7 +65,10 @@ Instellingen staan in `config.js` (`window.CHECKAPK_AI`). Modelkeuze:
 | `qwen2.5:7b` | ±5 GB | Sneller, goede middenweg |
 | `qwen2.5:3b` | ±2 GB | Snelst |
 
-Zonder videokaart rekent de processor; een samenvatting kan dan 10–60 seconden duren.
+Zonder videokaart rekent de processor; een samenvatting kan dan 10–60 seconden duren. De site laadt het model alvast
+zodra je "Vraag het" opent (`keepAlive`: 30 minuten in het geheugen), toont de samenvatting woord voor woord, en
+laat onder elk antwoord zien hoeveel tijd de RDW-gegevens en de AI kostten. `think` (alleen gpt-oss) staat op
+`medium`; zet hem op `low` voor snellere antwoorden.
 Vragen die de zoekbalk zelf al begrijpt, worden direct beantwoord zonder op de AI te wachten.
 
 Werkt de AI niet terwijl Ollama wel draait? Open de site via `http://localhost/...` (niet via een
