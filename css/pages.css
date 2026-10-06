@@ -2,18 +2,6 @@
 
 .search-hero { padding: 56px 0 28px; }
 
-.search-hero.compact { padding: 4px 0 20px; }
-
-.search-hero.compact .plate-form { justify-content: flex-start; }
-
-.search-hero.compact .plate-input { box-shadow: 0 4px 0 var(--ink); border-width: 2px; }
-
-.search-hero.compact .plate-input input { width: 190px; font-size: 26px; padding: 6px 10px 4px; }
-
-.search-hero.compact .plate-input .nl { font-size: 11px; padding: 5px 6px; }
-
-.search-hero.compact .btn-lg { font-size: 15px; padding: 0 18px; min-height: 40px; }
-
 .eyebrow {
   display: inline-flex; align-items: center; gap: 8px; font: 600 13px/1 var(--font-mono); text-transform: uppercase;
   letter-spacing: .08em; color: var(--muted); margin-bottom: 18px;
@@ -53,15 +41,20 @@
 
 .vehicle-head { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
 
-.vehicle-head > div { flex: 1; min-width: 220px; }
+.vehicle-title { flex: 1; min-width: 220px; }
+
+.vehicle-actions { display: flex; align-items: center; gap: 14px; margin-left: auto; }
 
 .vehicle-head h1 { margin: 0; font-size: clamp(26px, 3.6vw, 40px); line-height: 1.05; font-weight: 800; }
 
 .vehicle-head .meta { color: var(--muted); margin-top: 4px; }
 
 @media (max-width: 560px) {
-  .plate-input input { width: 200px; font-size: 36px; }
-  .plate-badge.big { font-size: 30px; }
+  .plate--lg { --plate-h: 52px; }
+  .plate--lg.plate--input input.plate-text { width: calc(var(--plate-h) * 3.6); }
+  .vehicle-actions { margin-left: 0; width: 100%; justify-content: space-between; }
+  .header-slot { order: 2; flex: 1; justify-content: flex-end; }
+  .theme-toggle { order: 2; }
   .card, .hero-card { padding: 18px; }
   .stats { gap: 10px; }
   .stat { min-height: 100px; padding: 14px; }
@@ -247,3 +240,10 @@ table.gens tr.active td { background: var(--yellow-soft); }
 .answer-sec.pending { min-height: 160px; display: flex; align-items: center; justify-content: center; }
 
 .timing { margin: 14px 0 0; font-family: var(--font-mono); font-size: 12px; }
+
+/* Tabbladen op smalle schermen: één scrollbare rij in plaats van meerdere regels */
+@media (max-width: 700px) {
+  .subtabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 4px -16px 18px; padding: 0 16px 4px; }
+  .subtabs::-webkit-scrollbar { display: none; }
+  .subtabs button { flex: none; }
+}

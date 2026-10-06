@@ -1,6 +1,7 @@
 /** Startpunt van de app. */
 import { getTheme, setTheme } from './lib/storage.js';
 import { startRouter } from './router.js';
+import { bindPlateSearch, headerSearchHtml } from './ui/plate-search.js';
 
 /** Licht/donker thema: onthouden keuze, anders de systeeminstelling. */
 function initTheme() {
@@ -14,5 +15,14 @@ function initTheme() {
   });
 }
 
+/** Compact kentekenveld in de menubalk. */
+function initHeaderSearch() {
+  const slot = document.querySelector('[data-header-search]');
+  if (!slot) return;
+  slot.innerHTML = headerSearchHtml();
+  bindPlateSearch(slot);
+}
+
 initTheme();
+initHeaderSearch();
 startRouter(/** @type {HTMLElement} */ (document.getElementById('app')));

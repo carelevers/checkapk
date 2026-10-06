@@ -14,6 +14,9 @@ import { DATASETS } from './datasets.js';
 /** @type {Map<string, Promise<Row[]>>} */
 const cache = new Map();
 
+/** Tijdelijke serverfouten: één keer opnieuw proberen. */
+const RETRY_STATUS = new Set([500, 502, 503, 504]);
+
 /** @param {DatasetKey|string} key */
 const datasetId = (key) => (DATASETS[/** @type {DatasetKey} */ (key)] || { id: key }).id;
 
@@ -44,7 +47,11 @@ export function query(key, params) {
     /** @type {Record<string, string>} */
     const headers = { Accept: 'application/json' };
     if (RDW_APP_TOKEN) headers['X-App-Token'] = RDW_APP_TOKEN;
-    const res = await fetch(url, { headers });
+    let res = await fetch(url, { headers });
+    if (RETRY_STATUS.has(res.status)) {
+      await new Promise((r) => setTimeout(r, 800));
+      res = await fetch(url, { headers });
+    }
     if (!res.ok) {
       let msg = `${res.status} ${res.statusText}`;
       try { const j = await res.json(); if (j.message) msg += ' — ' + j.message; } catch { /* geen JSON */ }

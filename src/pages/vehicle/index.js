@@ -6,7 +6,8 @@ import { addRecent } from '../../lib/storage.js';
 import { getReport } from '../../services/report.js';
 import { resolvePeerFilter } from '../../services/model-stats.js';
 import { errorBox, esc, loading } from '../../ui/html.js';
-import { bindPlateSearch, plateSearchHtml } from '../../ui/plate-search.js';
+import { plateHtml } from '../../ui/plate.js';
+import { setHeaderPlate } from '../../ui/plate-search.js';
 import { renderModelAnalysis } from '../model.js';
 import { vehicleHeaderHtml } from './header.js';
 import { renderReportTab, scorePillHtml } from './report-tab.js';
@@ -48,15 +49,15 @@ const TABS = [
  */
 export async function renderVehiclePage(el, { kenteken, tab }) {
   const k = normalizeKenteken(kenteken);
-  el.innerHTML = plateSearchHtml(k) + `<div data-result>${loading('RDW-gegevens ophalen voor ' + formatKenteken(k) + '…')}</div>`;
-  bindPlateSearch(el);
+  setHeaderPlate(k);
+  el.innerHTML = `<div data-result>${loading('RDW-gegevens ophalen voor ' + formatKenteken(k) + '…')}</div>`;
   const res = /** @type {HTMLElement} */ (el.querySelector('[data-result]'));
 
   let data;
   try { data = await fetchVehicle(k); } catch (e) { res.innerHTML = errorBox('Ophalen mislukt: ' + e.message); return; }
   if (data.voertuig.error) { res.innerHTML = errorBox('De RDW API gaf een fout: ' + data.voertuig.error); return; }
   if (!data.voertuig.rows.length) {
-    res.innerHTML = `<div class="card"><h2>Geen voertuig gevonden</h2><p class="muted">Kenteken <span class="plate-badge">${esc(formatKenteken(k))}</span> staat niet in het RDW-register (of is nog niet gepubliceerd).</p></div>`;
+    res.innerHTML = `<div class="card"><h2>Geen voertuig gevonden</h2><p class="muted">Kenteken ${plateHtml(k, 'xs')} staat niet in het RDW-register (of is nog niet gepubliceerd).</p></div>`;
     return;
   }
 

@@ -1,6 +1,7 @@
 /** Kop van de kentekenpagina: kenteken, merk/model en statuslabels. */
 import { daysBetween, fmtDate } from '../../lib/format.js';
-import { esc, plateBadge } from '../../ui/html.js';
+import { esc } from '../../ui/html.js';
+import { plateHtml } from '../../ui/plate.js';
 
 /** @typedef {import('../../domain/vehicle-summary.js').VehicleSummary} VehicleSummary */
 
@@ -41,10 +42,12 @@ export function vehicleHeaderHtml(s) {
   const meta = [v.voertuigsoort, v.inrichting, kleur, s.bouwjaar, s.brandstof].filter(Boolean).map(esc).join(' · ');
   return `<section class="card hero-card">
     <div class="vehicle-head">
-      ${plateBadge(s.kenteken, { big: true })}
-      <div><h1>${esc(s.titel || 'Onbekend voertuig')}</h1><div class="meta">${meta}</div></div>
-      <div class="score-pill-slot" data-score-pill></div>
-      <a class="btn ghost" href="#/vergelijk/${esc(s.kenteken)}">+ Vergelijk</a>
+      ${plateHtml(s.kenteken, 'lg')}
+      <div class="vehicle-title"><h1>${esc(s.titel || 'Onbekend voertuig')}</h1><div class="meta">${meta}</div></div>
+      <div class="vehicle-actions">
+        <div class="score-pill-slot" data-score-pill></div>
+        <a class="btn ghost btn-sm" href="#/vergelijk/${esc(s.kenteken)}">+ Vergelijk</a>
+      </div>
     </div>
     <div class="badges">${statusBadges(s)}</div>
   </section>`;

@@ -48,10 +48,12 @@ Regels:
 - **`domain/`** is puur: geen `fetch`, geen DOM, geen HTML. Alles is met gewone data te testen.
   Het rapportcijfer (`domain/report-score.js`) staat hier, met de gewichten bovenaan het bestand.
 - **`api/`** is de enige plek die met de RDW praat (via `rdw-client.js`). Identieke verzoeken worden
-  in het geheugen gecachet.
+  in het geheugen gecachet; bij een tijdelijke serverfout (500/502/503/504) wordt één keer opnieuw geprobeerd.
+  Vermijd zware query's over het hele register (bijv. groeperen op merk × model): die geven een 500-fout.
 - **`services/`** combineert API-verzoeken met domeinlogica (bijv. vergelijkgroep kiezen → statistieken
   ophalen → rapport berekenen). Resultaten per voertuig worden met een `WeakMap` gecachet.
-- **`ui/`** maakt HTML-strings. Alle data uit de API gaat door `esc()`.
+- **`ui/`** maakt HTML-strings. Alle data uit de API gaat door `esc()`. De kentekenplaat (`ui/plate.js`) is
+  één onderdeel in vier maten (`xs`, `sm`, `md`, `lg`).
 - **`pages/`** tekent schermen en koppelt events. Een pagina exporteert `render…(el, params)`.
 
 Er zijn geen globale variabelen; alles gaat via `import`/`export`. Event-handlers worden in JavaScript
@@ -75,7 +77,8 @@ gekoppeld (geen `onclick` in HTML), meestal via `data-…`-attributen.
 ### "Vraag het" (`#/vraag?q=…`)
 
 1. `assistant/understand.js → understand()`
-   - eerst regels (`parser.js`): merken/modellen uit de RDW-index (`model-index.js`), bouwjaren, onderwerpen;
+   - eerst regels (`parser.js`): merken/modellen (`model-index.js`: eerst de merkenlijst, dan per gevonden merk
+     de modellen; modellen zonder merk via alleen de woorden uit de vraag), bouwjaren, onderwerpen;
    - alleen als dat onvolledig is én Ollama draait: de AI zet de vraag om naar JSON (vast schema).
 2. `assistant/topics.js → buildJobs()` maakt per onderwerp × model een opdracht; elke opdracht
    geeft één of meer secties (titel, grafiek, CSV-gegevens).

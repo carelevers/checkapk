@@ -61,7 +61,15 @@ async function answer(page, question) {
   const ai = await checkAI();
   if (ai.ok) warmUp();
   let plan;
-  try { plan = await understand(question, ai.ok); } catch (e) { body.innerHTML = errorBox('Kon de RDW-gegevens niet ophalen: ' + e.message); return; }
+  try {
+    plan = await understand(question, ai.ok);
+  } catch (e) {
+    body.innerHTML = `${errorBox('De RDW-server reageert nu niet goed. Probeer het zo nog eens.')}
+      <p class="small muted">Technische melding: ${esc(e.message)}</p>
+      <button class="btn btn-sm" data-retry>Opnieuw proberen</button>`;
+    body.querySelector('[data-retry]')?.addEventListener('click', () => { card.remove(); answer(page, question); });
+    return;
+  }
 
   if (!plan.subjects.length && !plan.topics.includes('topmerken')) {
     body.innerHTML = '<p>Ik weet niet zeker over welke auto je het hebt. Noem een merk en/of model, bijvoorbeeld:</p>' + exampleButtons(EXAMPLES.slice(0, 3));

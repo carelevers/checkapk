@@ -30,16 +30,6 @@ header.top {
 
 .top-inner { max-width: 1240px; margin: 0 auto; padding: 12px 16px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
 
-.brand {
-  display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: var(--text);
-  font: 800 20px/1 var(--font-display); letter-spacing: -0.02em;
-}
-
-.brand-plate {
-  background: var(--yellow); color: var(--yellow-ink); border: 2px solid var(--ink); border-radius: 6px;
-  font: 700 17px/1 var(--font-plate); letter-spacing: .08em; padding: 4px 7px 3px;
-}
-
 nav.tabs { display: flex; gap: 2px; flex-wrap: wrap; background: var(--surface-2); padding: 4px; border-radius: 999px; }
 
 nav.tabs a {
@@ -51,8 +41,28 @@ nav.tabs a:hover { color: var(--text); }
 
 nav.tabs a.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 0 var(--border), 0 0 0 1px var(--border); }
 
+.brand {
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: var(--text);
+  font: 800 20px/1 var(--font-display); letter-spacing: -0.02em;
+}
+
+/* Logo: een mini-kentekenplaat met blauwe EU-strook */
+.brand-mark {
+  background: var(--plate-yellow); color: var(--plate-ink);
+  border: 2px solid var(--plate-ink); border-left: 8px solid var(--plate-eu); border-radius: 6px;
+  font: 600 18px/1 var(--font-plate); letter-spacing: .07em; padding: 4px 7px 3px;
+}
+
+.header-slot { margin-left: auto; display: flex; }
+
+.header-search { display: flex; gap: 6px; align-items: center; }
+
+.header-search .plate--input:focus-within { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
+
+body[data-route="home"] .header-search { display: none; }
+
 .theme-toggle {
-  margin-left: auto; display: grid; place-items: center; color: var(--text); width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border);
+  margin-left: 0; display: grid; place-items: center; color: var(--text); width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border);
   background: var(--surface); cursor: pointer; font-size: 16px; transition: transform .3s;
 }
 

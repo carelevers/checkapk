@@ -104,7 +104,4 @@ export const loading = (text = 'Laden…') => `<div class="loading"><div class="
 /** @param {string} msg */
 export const errorBox = (msg) => `<div class="error">${esc(msg)}</div>`;
 
-/** Kentekenplaatje. @param {string} kenteken @param {{big?: boolean}} [opts] */
-export const plateBadge = (kenteken, opts = {}) =>
-  `<span class="plate-badge${opts.big ? ' big' : ''}">${opts.big ? '<i>NL</i>' : ''}${esc(formatKenteken(kenteken))}</span>`;
 

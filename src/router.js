@@ -8,6 +8,7 @@ import { renderDatasetsPage } from './pages/datasets.js';
 import { renderHomePage } from './pages/home.js';
 import { renderModelPage } from './pages/model.js';
 import { renderVehiclePage } from './pages/vehicle/index.js';
+import { setHeaderPlate } from './ui/plate-search.js';
 
 /**
  * @typedef {object} Route
@@ -38,6 +39,8 @@ export function startRouter(el) {
   const render = () => {
     const { head, parts, query } = parseHash();
     const route = ROUTES.find((r) => r.path === head) || ROUTES[ROUTES.length - 1];
+    document.body.dataset.route = route.path || 'home';
+    if (route.path !== 'k') setHeaderPlate('');
     route.render(el, parts, query);
     document.querySelectorAll('[data-nav]').forEach((a) => a.classList.toggle('active', /** @type {HTMLElement} */ (a).dataset.nav === route.nav));
     window.scrollTo(0, 0);

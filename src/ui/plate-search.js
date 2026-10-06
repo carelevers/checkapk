@@ -1,26 +1,30 @@
-/** De gele kenteken-zoekbalk (startpagina en bovenaan de kentekenpagina). */
+/** Zoeken op kenteken: groot op de startpagina, compact in de menubalk op alle andere pagina's. */
 import { formatKenteken, normalizeKenteken } from '../domain/kenteken.js';
 import { getRecent } from '../lib/storage.js';
 import { esc } from './html.js';
+import { plateHtml, plateInputHtml } from './plate.js';
 
-/** @param {string} [kenteken] ingevuld kenteken; leeg = grote versie voor de startpagina */
-export function plateSearchHtml(kenteken = '') {
-  const recent = kenteken ? [] : getRecent();
-  return `<section class="search-hero${kenteken ? ' compact' : ''}">
-    ${kenteken ? '' : `<span class="eyebrow">Gratis · officiële RDW-gegevens</span><h1>Is het een goede auto?</h1>
-      <p>Typ het kenteken en krijg direct een rapportcijfer, alle APK-keuringen en tips voor als je hem wilt kopen.</p>`}
+/** Grote zoekbalk met introductie en recent gezochte kentekens (startpagina). */
+export function plateSearchHtml() {
+  const recent = getRecent();
+  return `<section class="search-hero">
+    <span class="eyebrow">Gratis · officiële RDW-gegevens</span>
+    <h1>Is het een goede auto?</h1>
+    <p>Typ het kenteken en krijg direct een rapportcijfer, alle APK-keuringen en tips voor als je hem wilt kopen.</p>
     <form class="plate-form" data-plate-form>
-      <div class="plate-input"><span class="nl"><span class="stars">★</span>NL</span>
-        <input name="kenteken" placeholder="XX-123-X" maxlength="10" autocomplete="off" spellcheck="false"
-          value="${esc(kenteken ? formatKenteken(kenteken) : '')}" aria-label="Kenteken"></div>
+      ${plateInputHtml({ size: 'lg' })}
       <button class="btn btn-lg">Check</button>
     </form>
     ${recent.length ? `<div class="recent"><span class="muted small">Recent:</span>${recent.map((r) =>
-      `<a class="chip" href="#/k/${esc(r.kenteken)}"><b>${esc(formatKenteken(r.kenteken))}</b> ${esc(r.titel || '')}</a>`).join('')}</div>` : ''}
+      `<a class="chip chip-plate" href="#/k/${esc(r.kenteken)}">${plateHtml(r.kenteken, 'xs')}<span>${esc(r.titel || '')}</span></a>`).join('')}</div>` : ''}
   </section>`;
 }
 
-/** Koppelt het gedrag (opmaken bij verlaten, naar kentekenpagina bij verzenden). @param {ParentNode} root */
+/**
+ * Koppelt het gedrag aan een zoekformulier binnen `root`:
+ * opmaken bij verlaten van het veld, naar de kentekenpagina bij verzenden.
+ * @param {ParentNode} root @returns {HTMLInputElement|null} het invoerveld
+ */
 export function bindPlateSearch(root) {
   const form = /** @type {HTMLFormElement|null} */ (root.querySelector('[data-plate-form]'));
   if (!form) return null;
@@ -29,7 +33,19 @@ export function bindPlateSearch(root) {
   form.addEventListener('submit', (ev) => {
     ev.preventDefault();
     const k = normalizeKenteken(input.value);
-    if (k) location.hash = '#/k/' + k;
+    if (k) { location.hash = '#/k/' + k; input.blur(); }
   });
   return input;
 }
+
+/** Vult het compacte zoekveld in de menubalk (bijv. met het getoonde kenteken). @param {string} kenteken */
+export function setHeaderPlate(kenteken) {
+  const input = /** @type {HTMLInputElement|null} */ (document.querySelector('[data-header-search] input'));
+  if (input) input.value = kenteken ? formatKenteken(kenteken) : '';
+}
+
+/** HTML voor het compacte zoekveld in de menubalk. */
+export const headerSearchHtml = () => `<form class="header-search" data-plate-form role="search">
+  ${plateInputHtml({ size: 'sm', placeholder: 'Kenteken' })}
+  <button class="icon-btn icon-btn--solid" aria-label="Zoeken"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+</form>`;

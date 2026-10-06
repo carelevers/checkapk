@@ -1,38 +1,57 @@
 /* Herbruikbare onderdelen: knoppen, kentekenplaat, kaarten, labels, tegels, tabellen,
  * grafieken, tijdlijn, formulieren en meldingen. */
 
+/* ---------- Kentekenplaat ----------
+ * Eén onderdeel voor alle maten: alles schaalt mee met --plate-h.
+ * Zwarte rand, blauwe EU-strook met 12 sterren en NL, zwarte smalle letters. */
+.plate {
+  --plate-h: 40px;
+  display: inline-flex; align-items: stretch; flex: none; vertical-align: middle;
+  height: var(--plate-h);
+  padding: calc(var(--plate-h) * .05);
+  background: var(--plate-yellow);
+  border: max(1px, calc(var(--plate-h) * .035)) solid var(--plate-ink);
+  border-radius: calc(var(--plate-h) * .13);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .25);
+  color: var(--plate-ink); text-decoration: none;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.plate--xs { --plate-h: 22px; }
+.plate--sm { --plate-h: 34px; }
+.plate--md { --plate-h: 44px; }
+.plate--lg { --plate-h: 64px; }
+
+.plate-eu {
+  width: calc(var(--plate-h) * .4); margin-right: calc(var(--plate-h) * .08);
+  display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  padding: calc(var(--plate-h) * .07) 0 calc(var(--plate-h) * .05);
+  background: var(--plate-eu);
+  border-radius: calc(var(--plate-h) * .08) calc(var(--plate-h) * .02) calc(var(--plate-h) * .02) calc(var(--plate-h) * .08);
+}
+.plate-eu svg { display: block; width: 78%; fill: #ffcc00; }
+.plate-eu b { color: #fff; font: 700 calc(var(--plate-h) * .2)/1 Arial, Helvetica, sans-serif; letter-spacing: .02em; }
+.plate--xs .plate-eu b { display: none; }
+.plate--xs .plate-eu { justify-content: center; }
+
+.plate-text {
+  display: flex; align-items: center; justify-content: center; flex: 1;
+  padding: calc(var(--plate-h) * .05) calc(var(--plate-h) * .16) 0 calc(var(--plate-h) * .06);
+  font: 600 calc(var(--plate-h) * .68)/1 var(--font-plate); letter-spacing: .04em;
+  text-transform: uppercase; white-space: nowrap; color: var(--plate-ink);
+}
+
+/* Als invoerveld */
+.plate--input { cursor: text; transition: box-shadow .15s, transform .15s; }
+.plate--input input.plate-text {
+  border: 0; background: transparent; outline: none; min-width: 0; text-align: center;
+  width: calc(var(--plate-h) * 4.1);
+}
+.plate--input input.plate-text::placeholder { color: rgba(18, 18, 18, .28); }
+.plate--input:focus-within { box-shadow: 0 0 0 3px var(--bg), 0 0 0 6px var(--accent); }
+.plate--lg.plate--input { box-shadow: 0 6px 0 var(--ink); }
+.plate--lg.plate--input:focus-within { transform: translateY(-2px); box-shadow: 0 8px 0 var(--ink), 0 0 0 4px var(--bg), 0 0 0 7px var(--accent); }
+
 .plate-form { display: flex; gap: 12px; flex-wrap: wrap; align-items: stretch; }
-
-.plate-input {
-  display: flex; align-items: stretch; border-radius: 10px; overflow: hidden;
-  border: 3px solid var(--ink); background: var(--yellow);
-  box-shadow: 0 6px 0 var(--ink);
-  transition: transform .15s, box-shadow .15s;
-}
-
-.plate-input:focus-within { transform: translateY(-2px); box-shadow: 0 8px 0 var(--ink); }
-
-.plate-input .nl {
-  background: var(--plate-blue); color: #fff; font: 700 14px/1 var(--font-plate);
-  display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 7px 8px 6px; gap: 6px;
-}
-
-.plate-input .stars { color: var(--yellow); font-size: 12px; }
-
-.plate-input input {
-  border: 0; background: transparent; color: #111; width: 290px; padding: 8px 16px 6px;
-  font: 700 46px/1 var(--font-plate); letter-spacing: .06em; text-transform: uppercase; text-align: center;
-}
-
-.plate-input input::placeholder { color: rgba(17, 17, 17, .28); }
-
-.plate-input input:focus { outline: none; }
-
-.plate-input.small { box-shadow: 0 4px 0 var(--ink); border-width: 2px; }
-
-.plate-input.small input { width: 150px; font-size: 26px; padding: 6px 8px 4px; }
-
-.plate-input.small .nl { font-size: 11px; padding: 5px 6px; }
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
@@ -58,20 +77,9 @@
   transition: border-color .2s;
 }
 
-.chip b { background: var(--yellow); color: #111; border-radius: 999px; padding: 1px 8px; font: 700 13px/1.5 var(--font-plate); letter-spacing: .05em; }
-
 .chip:hover { border-color: var(--line); }
 
-.plate-badge {
-  display: inline-flex; align-items: stretch; background: var(--yellow); color: #111; border: 2px solid var(--ink);
-  border-radius: 6px; font: 700 17px/1.25 var(--font-plate); letter-spacing: .06em; padding: 0 8px; white-space: nowrap; overflow: hidden;
-}
-
-.plate-badge i { font-style: normal; background: var(--plate-blue); color: #fff; font-size: .45em; display: flex; align-items: flex-end; padding: 0 5px 3px; margin: 0 8px 0 -8px; }
-
-.plate-badge.big { font-size: 40px; padding: 2px 14px 0; border-width: 3px; border-radius: 9px; box-shadow: 0 5px 0 var(--ink); }
-
-.plate-badge.big i { margin: -2px 12px 0 -14px; font-size: 15px; padding: 0 7px 6px; }
+.chip-plate { padding: 4px 12px 4px 4px; }
 
 .card {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
@@ -275,4 +283,11 @@ table.data a { font-weight: 600; }
 .btn-sm { min-height: 32px; padding: 0 12px; font-size: 13px; border-radius: 9px; }
 
 .icon-btn { background: none; border: 1px solid var(--border); border-radius: 50%; width: 30px; height: 30px; cursor: pointer; color: var(--muted); flex: none; }
+
+.icon-btn--solid { display: grid; place-items: center; width: 34px; height: 34px; border: 0; background: var(--ink); color: var(--bg); }
+
+:root[data-theme="dark"] .icon-btn--solid { background: var(--yellow); color: var(--yellow-ink); }
+
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .icon-btn--solid { background: var(--yellow); color: var(--yellow-ink); } }
+
 .field-wide { flex: 1; min-width: 220px; }

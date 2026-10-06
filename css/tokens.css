@@ -18,14 +18,16 @@
   --ok: #0e7a4a;  --ok-soft: #d7efe1;
   --warn: #b85c00; --warn-soft: #fbe3c8;
   --bad: #c4291c; --bad-soft: #f9dcd8;
-  --plate-blue: #1a3e93;
+  --plate-yellow: #f6bd00;    /* Nederlands kentekengeel */
+  --plate-eu: #003399;        /* EU-blauw */
+  --plate-ink: #121212;
   --chart: #14202e;
   --chart-hl: #f7c600;
   --radius: 20px;
   --font-display: "Bricolage Grotesque", "Instrument Sans", system-ui, sans-serif;
   --font-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
-  --font-plate: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  --font-plate: "Barlow Condensed", "Roboto Condensed", "Arial Narrow", Arial, sans-serif;
   color-scheme: light;
 }
 

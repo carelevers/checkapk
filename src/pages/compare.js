@@ -4,7 +4,8 @@ import { formatKenteken, normalizeKenteken } from '../domain/kenteken.js';
 import { summarizeVehicle } from '../domain/vehicle-summary.js';
 import { fmtDate, fmtEuro, fmtNum, fmtScore, num } from '../lib/format.js';
 import { getReport } from '../services/report.js';
-import { errorBox, esc, loading, plateBadge } from '../ui/html.js';
+import { errorBox, esc, loading } from '../ui/html.js';
+import { plateHtml, plateInputHtml } from '../ui/plate.js';
 
 const MAX_CARS = 4;
 
@@ -67,8 +68,8 @@ function tableBody(cars) {
 /** @param {HTMLElement} el @param {{list?: string}} params */
 export async function renderComparePage(el, params) {
   const list = (params.list || '').split(',').map(normalizeKenteken).filter(Boolean).slice(0, MAX_CARS);
-  const inputs = Array.from({ length: MAX_CARS }, (_, i) => `<div class="plate-input small"><span class="nl">NL</span>
-    <input name="k${i}" value="${esc(list[i] ? formatKenteken(list[i]) : '')}" placeholder="AB-12-CD" maxlength="10" autocomplete="off"></div>`).join('');
+  const inputs = Array.from({ length: MAX_CARS }, (_, i) =>
+    plateInputHtml({ name: 'k' + i, value: list[i] || '', size: 'md', placeholder: 'AB-12-CD', label: `Kenteken ${i + 1}` })).join('');
   el.innerHTML = `<section class="card"><h2>Auto's vergelijken</h2><p class="sub">Twijfel je tussen een paar auto's? Typ tot vier kentekens en zie welke het beste scoort.</p>
     <form class="form-row" data-compare-form>${inputs}<button class="btn">Vergelijk</button></form></section><div data-compare-out></div>`;
   el.querySelector('[data-compare-form]')?.addEventListener('submit', (ev) => {
@@ -86,7 +87,7 @@ export async function renderComparePage(el, params) {
   if (!cars.length) { out.innerHTML = errorBox('Geen van de kentekens gevonden.'); return; }
   out.innerHTML = `${missing.length ? `<div class="notice">Niet gevonden: ${missing.map((m) => esc(formatKenteken(m.kenteken))).join(', ')}</div><br>` : ''}
     <section class="card"><div class="table-wrap"><table class="data compare">
-      <thead><tr><th></th>${cars.map((c) => `<th><a href="#/k/${esc(c.kenteken)}">${plateBadge(c.kenteken)}</a></th>`).join('')}</tr></thead>
+      <thead><tr><th></th>${cars.map((c) => `<th><a href="#/k/${esc(c.kenteken)}">${plateHtml(c.kenteken, 'sm')}</a></th>`).join('')}</tr></thead>
       <tbody>${tableBody(cars)}</tbody></table></div>
       <p class="small muted">Groen = beste waarde. Begin bij het rapportcijfer bovenaan.</p></section>`;
 }

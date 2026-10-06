@@ -1,6 +1,6 @@
 /** Laag 1 van "Vraag het": vragen herkennen met regels (werkt altijd, zonder AI). */
 import { normalizeText } from '../lib/format.js';
-import { STOPWORDS, containsWord, findMerk, getModelIndex, modelsOfMerk } from './model-index.js';
+import { containsWord, findMerk, findModelsByWords, getMerken, modelsOfMerk } from './model-index.js';
 
 /** @typedef {import('./model-index.js').Subject} Subject */
 /**
@@ -55,7 +55,7 @@ export function parseYears(text) {
  * @param {string} question @returns {Promise<Plan>}
  */
 export async function parseQuestion(question) {
-  const index = await getModelIndex();
+  const merken = await getMerken();
   let text = normalizeText(question);
   /** @type {Subject[]} */
   const subjects = [];
@@ -63,7 +63,7 @@ export async function parseQuestion(question) {
 
   // Merken + modellen; langste naam eerst ("c3 picasso" vóór "c3")
   for (let guard = 0; guard < 4; guard++) {
-    const mk = findMerk(index, text);
+    const mk = findMerk(merken, text);
     if (!mk) break;
     consume(mk.key);
     const models = (await modelsOfMerk(mk.merk)).filter((m) => containsWord(text, m.key))
@@ -74,9 +74,9 @@ export async function parseQuestion(question) {
   // Model zonder merk ("golf 2015"): alleen bekende, niet te korte namen
   if (!subjects.length) {
     const seen = new Set();
-    const cands = index.models
-      .filter((m) => m.key.length >= 3 && /[a-z]/.test(m.key) && !STOPWORDS.has(m.key) && containsWord(text, m.key))
-      .sort((a, b) => b.key.length - a.key.length || b.n - a.n);
+    let cands = [];
+    try { cands = await findModelsByWords(text); } catch { /* zonder model verder */ }
+    cands = cands.filter((m) => m.key.length >= 2 && containsWord(text, m.key)).sort((a, b) => b.key.length - a.key.length || b.n - a.n);
     for (const m of cands) {
       if (seen.has(m.key) || !containsWord(text, m.key)) continue;
       seen.add(m.key); consume(m.key); subjects.push(m);

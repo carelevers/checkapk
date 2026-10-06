@@ -1,6 +1,6 @@
 /** Een vraag begrijpen: eerst met regels, en alleen als dat niet genoeg is met de lokale AI. */
 import { normalizeText } from '../lib/format.js';
-import { findMerk, getModelIndex, modelsOfMerk } from './model-index.js';
+import { findMerk, getMerken, modelsOfMerk } from './model-index.js';
 import { chat } from './ollama.js';
 import { TOPIC_LABELS, isComplete, parseQuestion } from './parser.js';
 
@@ -33,10 +33,10 @@ async function askAiForPlan(question) {
 
 /** Koppelt de merk/model-tekst van de AI aan echte RDW-namen. @returns {Promise<Plan>} */
 async function resolveAiPlan(raw) {
-  const index = await getModelIndex();
+  const merken = await getMerken();
   const subjects = [];
   for (const a of raw.autos || []) {
-    const mk = findMerk(index, normalizeText(a.merk)) || findMerk(index, normalizeText(a.merk + ' ' + a.model));
+    const mk = findMerk(merken, normalizeText(a.merk)) || findMerk(merken, normalizeText(a.merk + ' ' + a.model));
     if (!mk) continue;
     const key = normalizeText(a.model).replace(new RegExp('^' + normalizeText(mk.merk) + ' '), '');
     if (!key) { subjects.push({ merk: mk.merk }); continue; }
