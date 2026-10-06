@@ -525,7 +525,7 @@
 
     return { f, self, groep: f.groep || describeFilter(f), sample, total, totalAll, prijs, massa, apkVerlopen, export_, terugroep, onlogisch, count,
       gebrekTop, omschr, others, gPer, kPer, totG, totK, modelGpk, zonderGebreken, metKeuring,
-      fuelCount, co2, kw, verbruik, jaarItems, kleurItems, label };
+      fuelCount, fuelRows, co2, kw, verbruik, jaarItems, kleurItems, label };
   }
 
   async function runModelAnalysis(out, f, self) {
@@ -535,7 +535,7 @@
     if (st.empty) { out.innerHTML = '<section class="card"><p class="muted">Geen voertuigen gevonden voor deze zoekopdracht. Merk en model moeten exact overeenkomen met de RDW-schrijfwijze (bijv. "VOLKSWAGEN" en "GOLF").</p></section>'; return; }
     const { sample, total, totalAll, prijs, massa, apkVerlopen, export_, terugroep, onlogisch, count,
       gebrekTop, omschr, others, gPer, kPer, totG, totK, modelGpk, zonderGebreken, metKeuring,
-      fuelCount, co2, kw, verbruik, jaarItems, kleurItems, label } = st;
+      fuelCount, fuelRows, co2, kw, verbruik, jaarItems, kleurItems, label } = st;
     let compare = '';
     if (self) {
       const sKw = self.kw, sCo2 = self.co2;
@@ -578,7 +578,7 @@
         <section class="card"><h2>Kleuren</h2>${U.bars(kleurItems, { pct: true, total })}</section>
         <section class="card"><h2>Brandstof</h2>${U.bars(Object.entries(fuelCount).map(([name, n]) => ({ name, n, hl: self && self.brandstof.includes(name) })).sort((a, b) => b.n - a.n), { pct: true })}</section>
         <section class="card"><h2>Uitvoering / inrichting</h2>${U.bars(count('inrichting'), { pct: true, total: sample.length })}</section>
-        <section class="card"><h2>Varianten (typegoedkeuring)</h2>${U.bars(count('uitvoering').map(i => ({ ...i, hl: self && i.name === self.v.uitvoering })), { pct: true, total: sample.length })}</section>
+        <section class="card"><h2>Motorvermogen</h2><p class="sub">Hoe sterk zijn de motoren van dit model?</p>${U.bars(U.pkItems(fuelRows, self && self.pk), { pct: true })}</section>
       </div>
       <section class="card"><h2>Vergelijkbare auto's</h2><p class="sub">Klik op een kenteken om die auto te bekijken.</p>
         ${U.table(sample.slice(0, 40).map(r => ({ ...r, gebreken: gPer[r.kenteken] ?? '', keuringen: kPer[r.kenteken] ?? '' })),
@@ -711,11 +711,11 @@
         <a class="feature" href="#/"><b>Rapportcijfer</b><span>Eén cijfer van 1 tot 10, met in gewone taal wat goed is en waar je op moet letten.</span></a>
         <a class="feature" href="#/model"><b>APK-geschiedenis</b><span>Elke keuring sinds 2018 en wat er gerepareerd moest worden. Beter of slechter dan andere auto's van hetzelfde type?</span></a>
         <a class="feature" href="#/vergelijk"><b>Auto's vergelijken</b><span>Twijfel je tussen een paar auto's? Zet ze naast elkaar en zie welke het beste scoort.</span></a>
-        <a class="feature" href="#/datasets"><b>Voor experts</b><span>Zelf zoeken in alle RDW-gegevens.</span></a>
+        <a class="feature" href="#/vraag"><b>Vraag het</b><span>"Meest voorkomende mankementen van een Citroën C3 2010-2017": typ je vraag en krijg direct grafieken.</span></a>
       </div>`;
     bindSearch(el);
     el.querySelector('#plate').focus();
   }
 
-  window.Views = { homePage, kentekenPage, comparePage, modelAnalysis, datasetsPage, summarize, computeModelStats, resolvePeerFilter, describeFilter, tgkBase, gebrekMap };
+  window.Views = { generations, homePage, kentekenPage, comparePage, modelAnalysis, datasetsPage, summarize, computeModelStats, resolvePeerFilter, describeFilter, tgkBase, gebrekMap };
 })();

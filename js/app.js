@@ -18,6 +18,9 @@
     } else if (parts[0] === 'model') {
       nav = 'model';
       Views.modelAnalysis(app, { merk: params.merk || '', model: params.model || '', van: params.van || '', tot: params.tot || '', tgk: params.tgk || '', type: params.type || '' });
+    } else if (parts[0] === 'vraag') {
+      nav = 'vraag';
+      Assistant.page(app, params);
     } else if (parts[0] === 'datasets') {
       nav = 'datasets';
       Views.datasetsPage(app, params);

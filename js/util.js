@@ -143,7 +143,7 @@
       <div class="bar-row" title="${esc(i.name)}: ${fmtNum(i.n)}">
         <div class="name">${esc(i.name)}</div>
         <div class="bar-track"><div class="bar-fill${i.hl ? ' hl' : ''}" style="width:${(i.n / max * 100).toFixed(1)}%"></div></div>
-        <div class="n">${opts.pct ? (i.n / total * 100).toFixed(1) + '%' : fmtNum(i.n)}</div>
+        <div class="n">${opts.fmt ? opts.fmt(i.n) : opts.pct ? (i.n / total * 100).toFixed(1) + '%' : fmtNum(i.n)}</div>
       </div>`).join('') + '</div>';
   }
 
@@ -156,6 +156,20 @@
         <div class="bw"><div class="b" style="height:${(i.n / max * 100).toFixed(1)}%"></div></div>
         <div class="x">${esc(i.x)}</div>
       </div>`).join('') + '</div>';
+  }
+
+  /* Vermogens groeperen tot leesbare klassen: "75 pk", "110 pk" … */
+  function pkItems(rows, hlPk) {
+    const m = {};
+    for (const r of rows) {
+      const kw = num(r.nettomaximumvermogen);
+      if (!kw) continue;
+      const pk = Math.round(kw * 1.35962 / 5) * 5;
+      m[pk] = (m[pk] || 0) + 1;
+    }
+    const hl = hlPk ? Math.round(hlPk / 5) * 5 : null;
+    return Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 10)
+      .map(([pk, n]) => ({ name: pk + ' pk', n, hl: +pk === hl }));
   }
 
   function stat(label, value, hint) {
@@ -179,6 +193,6 @@
 
   window.U = {
     esc, parseDate, fmtDate, num, fmtNum, fmtEuro, daysBetween, ageText, prettyKey, prettyValue,
-    visibleKeys, kv, table, bars, columns, stat, loading, errorBox, getRecent, addRecent,
+    visibleKeys, kv, table, bars, columns, pkItems, stat, loading, errorBox, getRecent, addRecent,
   };
 })();

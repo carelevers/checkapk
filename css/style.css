@@ -387,3 +387,38 @@ footer { text-align: center; color: var(--muted); font-size: 13px; padding: 24px
 .gen-chip button { border: 0; background: var(--ink); color: var(--yellow); width: 22px; height: 22px; border-radius: 50%; cursor: pointer; font-size: 11px; }
 .btn-sm { min-height: 32px; padding: 0 12px; font-size: 13px; border-radius: 9px; }
 table.gens tr.active td { background: var(--yellow-soft); }
+
+/* ---------- Vraag het ---------- */
+.ask-hero { padding: 40px 0 24px; }
+.ask-hero h1 { font-size: clamp(32px, 5vw, 56px); line-height: 1; margin: 0 0 14px; font-weight: 800; }
+.ask-hero p { color: var(--muted); font-size: 17px; margin: 0 0 24px; max-width: 60ch; }
+.ask-form { display: flex; gap: 10px; flex-wrap: wrap; }
+.ask-form input {
+  flex: 1; min-width: 240px; font: 500 18px/1.4 var(--font-body); color: var(--text);
+  background: var(--surface); border: 2px solid var(--line); border-radius: 14px; padding: 14px 18px;
+  box-shadow: 0 5px 0 var(--line);
+}
+.ask-form input:focus { outline: none; border-color: var(--yellow); box-shadow: 0 5px 0 var(--ink); }
+.examples { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.chip.ex { cursor: pointer; padding: 6px 12px; font: inherit; font-size: 13px; }
+.ai-status { margin-top: 16px; color: var(--muted); }
+.ai-status .dot-on, .ai-status .dot-off { margin-right: 8px; vertical-align: 1px; }
+.dot-on, .dot-off { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.dot-on { background: var(--ok); box-shadow: 0 0 0 4px var(--ok-soft); }
+.dot-off { background: var(--muted); }
+.answer .q-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.answer .q-head h2 { margin-bottom: 8px; }
+.icon-btn { background: none; border: 1px solid var(--border); border-radius: 50%; width: 30px; height: 30px; cursor: pointer; color: var(--muted); flex: none; }
+.q-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 16px; }
+.q-chip { background: var(--yellow); color: #111; border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: 700; }
+.q-chip.soft { background: var(--surface-2); color: var(--text); }
+.ai-summary { background: var(--surface-2); border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; }
+.ai-text { margin-top: 6px; }
+.ai-summary .loading { padding: 4px 0; }
+.ai-label { font: 500 11px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.answer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 860px) { .answer-grid { grid-template-columns: 1fr; } }
+.answer-sec { border: 1px solid var(--border); border-radius: 16px; padding: 16px; min-width: 0; }
+.sec-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.sec-head h3 { margin: 0 0 6px; font-size: 16px; }
+.answer-sec .sub { margin: 0 0 12px; }

@@ -14,6 +14,7 @@ Een eigen "CarScanner": zoek elk Nederlands kenteken op en zie alles wat de
 - **Kentekens naast elkaar**: tot vier auto's in één tabel; de beste waarde wordt groen.
 - **Generaties per model**: overzicht van alle generaties/uitvoeringen van een model met de jaren waarin ze vooral gebouwd zijn; klik er één aan om alleen die te analyseren.
 - **Modelanalyse**: dezelfde analyse, maar dan voor elk merk/model/bouwjaar zonder dat je een kenteken nodig hebt.
+- **Vraag het**: stel een vraag in gewone taal ("meest voorkomende mankementen van een Citroën C3 2010-2017", "vergelijk Yaris en Polo", "kleuren Golf vanaf 2020") en krijg direct grafieken uit het RDW-register, met CSV-download. Werkt zonder AI; met een lokale AI (zie hieronder) begrijpt hij vrijere vragen en schrijft hij een korte samenvatting.
 - **Datasets**: vrije SoQL-querytool op alle gebruikte RDW-datasets.
 - Licht en donker thema, werkt op mobiel, onthoudt recent gezochte kentekens.
 
@@ -41,6 +42,35 @@ node server.js
 ```
 
 Open daarna http://localhost:3000. Een andere poort kies je met `set PORT=8080` en dan `node server.js`.
+
+## Lokale AI
+
+"Vraag het" werkt standaard met ingebouwde vraagherkenning. Met een lokale AI begrijpt hij
+ook vrijere vragen ("welke is beter: picanto of yaris?") en schrijft hij een korte samenvatting.
+Alles draait op je eigen pc; er gaat niets naar internet behalve de RDW-zoekopdrachten.
+De cijfers komen altijd uit de RDW-data, de AI vertaalt alleen de vraag en vat samen.
+
+1. Installeer [Ollama](https://ollama.com/download) voor Windows.
+2. Download het model (één keer, ±13 GB):
+   ```bat
+   ollama pull gpt-oss:20b
+   ```
+3. Ollama draait daarna automatisch op de achtergrond. Open "Vraag het"; onder de zoekbalk staat "Lokale AI actief".
+
+Instellingen staan in `config.js` (`window.CHECKAPK_AI`). Modelkeuze:
+
+| Model | Grootte | Advies |
+|---|---|---|
+| `gpt-oss:20b` (standaard) | ±13 GB | Slimst; prima met 32 GB werkgeheugen, ook zonder videokaart |
+| `qwen2.5:7b` | ±5 GB | Sneller, goede middenweg |
+| `qwen2.5:3b` | ±2 GB | Snelst |
+
+Zonder videokaart rekent de processor; een samenvatting kan dan 10–60 seconden duren.
+Vragen die de zoekbalk zelf al begrijpt, worden direct beantwoord zonder op de AI te wachten.
+
+Werkt de AI niet terwijl Ollama wel draait? Open de site via `http://localhost/...` (niet via een
+ander adres), of sta het adres toe met de omgevingsvariabele `OLLAMA_ORIGINS`, bijvoorbeeld
+`setx OLLAMA_ORIGINS "http://localhost,http://127.0.0.1"`, en herstart Ollama.
 
 ## Optioneel: app token
 
