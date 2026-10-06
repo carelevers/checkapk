@@ -1,0 +1,6 @@
+# Apache/XAMPP: verborgen bestanden en mappen (zoals .git) niet serveren
+RedirectMatch 404 /\.(?!well-known)
+# Geen mapoverzichten tonen
+Options -Indexes
+# JavaScript-modules met het juiste type serveren
+AddType text/javascript .js

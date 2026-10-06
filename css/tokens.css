@@ -1,0 +1,46 @@
+/* Ontwerptokens: kleuren, lettertypes en afronding, voor licht en donker thema.
+ * Palet geïnspireerd op de Nederlandse weg: kentekengeel, inktblauw, bewegwijzeringsgroen,
+ * warm papier/asfalt. Geen gradients. Pas kleuren alleen hier aan. */
+
+:root {
+  --bg: #f3efe6;
+  --surface: #fffdf8;
+  --surface-2: #ebe6da;
+  --ink: #14202e;
+  --text: #14202e;
+  --muted: #5f6670;
+  --border: #ddd6c6;
+  --line: #14202e;
+  --yellow: #f7c600;
+  --yellow-ink: #14202e;
+  --yellow-soft: #fbedb0;
+  --accent: #0b4f9c;          /* ANWB/RDW-blauw voor links */
+  --ok: #0e7a4a;  --ok-soft: #d7efe1;
+  --warn: #b85c00; --warn-soft: #fbe3c8;
+  --bad: #c4291c; --bad-soft: #f9dcd8;
+  --plate-blue: #1a3e93;
+  --chart: #14202e;
+  --chart-hl: #f7c600;
+  --radius: 20px;
+  --font-display: "Bricolage Grotesque", "Instrument Sans", system-ui, sans-serif;
+  --font-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --font-plate: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1a1916; --surface: #23221e; --surface-2: #2e2c27; --text: #efeadf; --muted: #a8a294;
+    --border: #3a3832; --line: #efeadf; --accent: #8cb8ff; --yellow-soft: #3d3412;
+    --ok: #5dd39a; --ok-soft: #173a29; --warn: #ffa64d; --warn-soft: #3f2a12; --bad: #ff8a7a; --bad-soft: #43201b;
+    --chart: #efeadf; color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #1a1916; --surface: #23221e; --surface-2: #2e2c27; --text: #efeadf; --muted: #a8a294;
+  --border: #3a3832; --line: #efeadf; --accent: #8cb8ff; --yellow-soft: #3d3412;
+  --ok: #5dd39a; --ok-soft: #173a29; --warn: #ffa64d; --warn-soft: #3f2a12; --bad: #ff8a7a; --bad-soft: #43201b;
+  --chart: #efeadf; color-scheme: dark;
+}

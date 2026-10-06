@@ -18,9 +18,23 @@ Een eigen "CarScanner": zoek elk Nederlands kenteken op en zie alles wat de
 - **Datasets**: vrije SoQL-querytool op alle gebruikte RDW-datasets.
 - Licht en donker thema, werkt op mobiel, onthoudt recent gezochte kentekens.
 
+## Projectopbouw
+
+Moderne JavaScript-modules zonder build-stap. Zie [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) voor de
+opbouw en [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) voor onderhoud: hoe je een dataset, tabblad,
+onderwerp of pagina toevoegt en hoe je het rapportcijfer aanpast.
+
+```
+src/api        RDW API          src/domain    logica (rapportcijfer, kentekens, …)
+src/services   statistieken     src/pages     schermen
+src/assistant  "Vraag het"      src/ui, lib   bouwstenen en hulpjes
+```
+
 ## Draaien op localhost
 
 De site is volledig statisch (HTML/CSS/JS). De browser roept de RDW API rechtstreeks aan, dus er is geen backend of database nodig.
+Open de site altijd via een webserver (`http://localhost/...`); dubbelklikken op `index.html` werkt niet, omdat browsers
+JavaScript-modules niet vanaf `file://` laden.
 
 ### Optie A: Apache / XAMPP / Laragon / IIS (`C:\var\www\checkapk`)
 
