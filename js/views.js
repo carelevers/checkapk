@@ -89,8 +89,8 @@
   /* ---------- Kentekenpagina ---------- */
 
   const SUBTABS = [
-    ['overzicht', 'Overzicht'], ['apk', 'APK-historie'], ['terugroep', 'Terugroepacties'],
-    ['milieu', 'Milieu & brandstof'], ['techniek', 'Techniek'], ['vergelijk', 'Zelfde type'], ['data', 'Alle data'],
+    ['rapport', 'Rapport'], ['overzicht', 'Overzicht'], ['apk', 'APK-keuringen'], ['terugroep', 'Terugroepacties'],
+    ['milieu', 'Verbruik & milieu'], ['techniek', 'Specificaties'], ['vergelijk', 'Vergelijk met zelfde type'], ['data', 'Alle gegevens'],
   ];
 
   async function kentekenPage(el, kenteken, tab) {
@@ -125,9 +125,10 @@
     const body = res.querySelector('#tabbody');
     const show = (t) => {
       res.querySelectorAll('.subtabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
-      history.replaceState(null, '', '#/k/' + k + (t && t !== 'overzicht' ? '/' + t : ''));
+      history.replaceState(null, '', '#/k/' + k + (t && t !== 'rapport' ? '/' + t : ''));
       body.classList.remove('fade-in'); void body.offsetWidth; body.classList.add('fade-in');
       ({
+        rapport: () => { Report.renderTab(body, s, data); },
         overzicht: () => { body.innerHTML = overviewTab(s, data); },
         apk: () => { body.innerHTML = apkTab(s, data); },
         terugroep: () => { body.innerHTML = recallTab(data); },
@@ -139,7 +140,8 @@
       body.querySelectorAll('[data-goto]').forEach(a => a.addEventListener('click', ev => { ev.preventDefault(); show(a.dataset.goto); }));
     };
     res.querySelectorAll('.subtabs button').forEach(b => b.addEventListener('click', () => show(b.dataset.tab)));
-    show(SUBTABS.some(([id]) => id === tab) ? tab : 'overzicht');
+    show(SUBTABS.some(([id]) => id === tab) ? tab : 'rapport');
+    Report.compute(s, data).then(r => { const pill = res.querySelector('#scorePill'); if (pill) pill.innerHTML = Report.pill(r); }).catch(() => {});
   }
 
   function vehicleHeader(s) {
@@ -150,14 +152,15 @@
       <div class="vehicle-head">
         <span class="plate-badge big"><i>NL</i>${esc(RDW.formatKenteken(s.kenteken))}</span>
         <div><h1>${esc(s.titel || 'Onbekend voertuig')}</h1><div class="meta">${meta}</div></div>
+        <div id="scorePill" class="score-pill-slot"></div>
         <a class="btn ghost" href="#/vergelijk/${esc(s.kenteken)}">+ Vergelijk</a>
       </div>
       <div class="badges">
         ${apkBadge(s)}
-        ${yesNoBadge(v.wam_verzekerd, 'WAM verzekerd', 'ja')}
-        ${s.terugroepTotaal ? `<span class="badge ${s.terugroepOpen ? 'bad' : 'ok'}">Terugroepacties: ${s.terugroepTotaal}${s.terugroepOpen ? ` (${s.terugroepOpen} open)` : ''}</span>`
-          : yesNoBadge(v.openstaande_terugroepactie_indicator, 'Open terugroepactie', 'nee')}
-        ${v.tellerstandoordeel ? `<span class="badge ${/logisch/i.test(v.tellerstandoordeel) && !/onlogisch/i.test(v.tellerstandoordeel) ? 'ok' : 'warn'}">Tellerstand: ${esc(v.tellerstandoordeel)}</span>` : ''}
+        ${v.wam_verzekerd ? (/ja/i.test(v.wam_verzekerd) ? '<span class="badge ok">Verzekerd</span>' : '<span class="badge warn">Niet verzekerd</span>') : ''}
+        ${s.terugroepTotaal ? (s.terugroepOpen ? `<span class="badge bad">${s.terugroepOpen} terugroepactie${s.terugroepOpen > 1 ? 's' : ''} open</span>` : '<span class="badge ok">Geen open terugroepacties</span>')
+          : (/ja/i.test(v.openstaande_terugroepactie_indicator || '') ? '<span class="badge bad">Terugroepactie open</span>' : '<span class="badge ok">Geen open terugroepacties</span>')}
+        ${/onlogisch/i.test(v.tellerstandoordeel || '') ? '<span class="badge bad">Kilometerstand onlogisch</span>' : /logisch/i.test(v.tellerstandoordeel || '') ? '<span class="badge ok">Kilometerstand klopt</span>' : ''}
         ${/ja/i.test(v.export_indicator || '') ? '<span class="badge bad">Geëxporteerd</span>' : ''}
         ${/ja/i.test(v.taxi_indicator || '') ? '<span class="badge warn">(Ex-)taxi</span>' : ''}
         ${/ja/i.test(v.wacht_op_keuren || '') ? '<span class="badge warn">Wacht op keuren</span>' : ''}
@@ -174,41 +177,40 @@
         ${U.stat('Leeftijd', s.toelating ? esc(ageText(s.toelating)) : '', s.toelating ? 'sinds ' + fmtDate(s.toelating) : '')}
         ${U.stat('Vermogen', s.kw ? `${fmtNum(s.pk)} pk` : '', s.kw ? fmtNum(s.kw) + ' kW' : '')}
         ${U.stat('Catalogusprijs', fmtEuro(v.catalogusprijs), v.bruto_bpm ? 'BPM ' + fmtEuro(v.bruto_bpm) : '')}
-        ${U.stat('Massa rijklaar', v.massa_rijklaar ? fmtNum(v.massa_rijklaar) + ' kg' : '', v.cilinderinhoud ? fmtNum(v.cilinderinhoud) + ' cc' : '')}
+        ${U.stat('Gewicht', v.massa_rijklaar ? fmtNum(v.massa_rijklaar) + ' kg' : '', v.cilinderinhoud ? fmtNum(v.cilinderinhoud) + ' cc' : '')}
         ${U.stat('Op naam sinds', s.eigenaarSinds ? fmtDate(s.eigenaarSinds) : '', s.eigenaarSinds ? esc(ageText(s.eigenaarSinds)) : '')}
-        ${U.stat('APK-meldingen', fmtNum(s.history.length), last ? 'laatste ' + fmtDate(last.date) : '')}
-        ${U.stat('Gebreken totaal', fmtNum(s.totaalGebreken), s.gebrekenPerKeuring != null ? fmtNum(s.gebrekenPerKeuring, 2) + ' per keuring' : '')}
+        ${U.stat('APK-keuringen', fmtNum(s.history.length), last ? 'laatste ' + fmtDate(last.date) : '')}
+        ${U.stat('Mankementen bij APK', fmtNum(s.totaalGebreken), s.gebrekenPerKeuring != null ? fmtNum(s.gebrekenPerKeuring, 1) + ' per keuring' : '')}
         ${U.stat('CO₂', s.co2 != null ? fmtNum(s.co2) + ' g/km' : '', s.euroklasse ? 'Euro ' + esc(s.euroklasse) : '')}
       </div>
       <div class="grid-2">
         <section class="card"><h2>Voertuig</h2>${U.kv(v, ['merk', 'handelsbenaming', 'voertuigsoort', 'inrichting', 'eerste_kleur', 'tweede_kleur',
           'aantal_zitplaatsen', 'aantal_deuren', 'datum_eerste_toelating', 'datum_eerste_tenaamstelling_in_nederland', 'datum_tenaamstelling',
           'vervaldatum_apk', 'zuinigheidsclassificatie', 'catalogusprijs', 'bruto_bpm'])}</section>
-        <section class="card"><h2>Laatste APK-meldingen</h2>${apkTimeline(s.history.slice(0, 4), data)}
-          ${s.history.length > 4 ? `<p><a href="#" data-goto="apk">Volledige historie (${s.history.length}) →</a></p>` : ''}</section>
+        <section class="card"><h2>Laatste APK-keuringen</h2>${apkTimeline(s.history.slice(0, 4), data)}
+          ${s.history.length > 4 ? `<p><a href="#" data-goto="apk">Alle keuringen (${s.history.length}) →</a></p>` : ''}</section>
       </div>`;
   }
 
   /* ---------- APK-historie ---------- */
 
   function apkTimeline(history, data) {
-    if (!history.length) return '<p class="muted">Geen APK-meldingen gevonden in de open data.</p>';
+    if (!history.length) return '<p class="muted">Geen APK-keuringen gevonden.</p>';
     const omschr = gebrekMap(data.gebrekOmschrijving.rows);
     return '<ul class="timeline">' + history.map(e => {
       const k = e.keuringen[0] || {};
-      const soort = k.soort_melding_ki_omschrijving || k.soort_erkenning_omschrijving || (e.keuringen.length ? 'Keuring' : 'Gebreken geconstateerd');
+      const soortRaw = k.soort_melding_ki_omschrijving || k.soort_erkenning_omschrijving || '';
+      const soort = /periodiek|apk/i.test(soortRaw) || !soortRaw ? 'APK-keuring' : soortRaw.charAt(0).toUpperCase() + soortRaw.slice(1);
       const verval = k.vervaldatum_keuring_dt || k.vervaldatum_keuring;
-      const tijd = k.meld_tijd_door_keuringsinstantie ? String(k.meld_tijd_door_keuringsinstantie).padStart(4, '0').replace(/(\d{2})(\d{2})$/, '$1:$2') : '';
       const cls = e.aantalGebreken === 0 ? '' : e.aantalGebreken >= 4 ? 'bad' : 'warn';
       const defects = e.gebreken.map(g => {
         const o = omschr[g.gebrek_identificatie] || {};
         const n = num(g.aantal_gebreken_geconstateerd) || 1;
-        return `<li>${n > 1 ? `<b>${n}×</b> ` : ''}${esc(o.gebrek_omschrijving || 'Gebrek')} <code>${esc(g.gebrek_identificatie)}</code></li>`;
+        return `<li><span class="cat-chip">${esc(Report.categorize(o.gebrek_omschrijving))}</span><span>${n > 1 ? `<b>${n}×</b> ` : ''}${esc(o.gebrek_omschrijving || 'Mankement')}</span></li>`;
       }).join('');
       return `<li><span class="dot ${cls}"></span>
-        <div class="when">${fmtDate(e.date)}${tijd ? ` <span class="muted small">${esc(tijd)}</span>` : ''}</div>
-        <div class="what">${esc(soort)}${verval ? ' · nieuwe vervaldatum ' + fmtDate(verval) : ''}
-          · ${e.aantalGebreken ? `<b>${e.aantalGebreken} gebrek${e.aantalGebreken > 1 ? 'en' : ''}</b>` : 'geen gebreken gemeld'}</div>
+        <div class="when">${fmtDate(e.date)}</div>
+        <div class="what">${esc(soort)} · ${e.aantalGebreken ? `<b>${e.aantalGebreken} mankement${e.aantalGebreken > 1 ? 'en' : ''} gevonden</b>` : 'zonder mankementen'}${verval ? ' · goedgekeurd t/m ' + fmtDate(verval) : ''}</div>
         ${defects ? `<ul class="defects">${defects}</ul>` : ''}</li>`;
     }).join('') + '</ul>';
   }
@@ -234,18 +236,18 @@
 
     return `
       <div class="stats bento">
-        ${U.stat('APK-vervaldatum', s.apk ? fmtDate(s.apk) : '', s.apk ? (daysBetween(new Date(), s.apk) >= 0 ? 'nog ' + daysBetween(new Date(), s.apk) + ' dagen' : 'verlopen') : '')}
-        ${U.stat('Meldingen', fmtNum(s.history.length))}
-        ${U.stat('Met gebreken', fmtNum(metGebreken), s.history.length ? Math.round(metGebreken / s.history.length * 100) + '% van de meldingen' : '')}
-        ${U.stat('Gebreken totaal', fmtNum(s.totaalGebreken), s.gebrekenPerKeuring != null ? fmtNum(s.gebrekenPerKeuring, 2) + ' per keuring' : '')}
-        ${U.stat('Tellerstand', esc(s.v.tellerstandoordeel || ''), s.v.jaar_laatste_registratie_tellerstand ? 'laatst geregistreerd ' + esc(s.v.jaar_laatste_registratie_tellerstand) : '')}
+        ${U.stat('APK geldig tot', s.apk ? fmtDate(s.apk) : '', s.apk ? (daysBetween(new Date(), s.apk) >= 0 ? 'nog ' + daysBetween(new Date(), s.apk) + ' dagen' : 'verlopen') : '')}
+        ${U.stat('Keuringen', fmtNum(s.history.length))}
+        ${U.stat('Met mankementen', fmtNum(metGebreken), s.history.length ? Math.round(metGebreken / s.history.length * 100) + '% van de keuringen' : '')}
+        ${U.stat('Mankementen totaal', fmtNum(s.totaalGebreken), s.gebrekenPerKeuring != null ? fmtNum(s.gebrekenPerKeuring, 1) + ' per keuring' : '')}
+        ${U.stat('Kilometerstand', esc(s.v.tellerstandoordeel || ''), s.v.jaar_laatste_registratie_tellerstand ? 'laatst geregistreerd ' + esc(s.v.jaar_laatste_registratie_tellerstand) : '')}
       </div>
       <div class="grid-2">
-        <section class="card"><h2>Gebreken per jaar</h2>${U.columns(yearItems)}</section>
-        <section class="card"><h2>Meest voorkomende gebreken</h2>${U.bars(topGebreken)}</section>
+        <section class="card"><h2>Mankementen per jaar</h2>${U.columns(yearItems)}</section>
+        <section class="card"><h2>Wat werd het vaakst gevonden?</h2>${U.bars(topGebreken)}</section>
       </div>
-      <section class="card"><h2>Tijdlijn</h2>
-        <p class="sub">Meldingen van keuringsinstanties gecombineerd met de geconstateerde gebreken per datum.</p>
+      <section class="card"><h2>Alle keuringen</h2>
+        <p class="sub">Elke APK-keuring met wat er gevonden is. Nieuwste bovenaan.</p>
         ${apkTimeline(s.history, data)}
         ${data.keuringen.error ? U.errorBox('Keuringen: ' + data.keuringen.error) : ''}
         ${data.gebreken.error ? U.errorBox('Gebreken: ' + data.gebreken.error) : ''}
@@ -349,8 +351,8 @@
 
   async function safe(p) { try { return await p; } catch (e) { return { error: e.message }; } }
 
-  async function runModelAnalysis(out, f, self) {
-    out.innerHTML = U.loading('Model analyseren…');
+  /* Statistieken over hetzelfde merk/model/bouwjaar (gedeeld door rapport en modelanalyse). */
+  async function computeModelStats(f, self) {
     const whereAll = modelWhere(f, false);
     const where = modelWhere(f, true);
     const q = (key, params) => safe(RDW.query(key, params));
@@ -362,8 +364,8 @@
       q('voertuig', { $select: 'eerste_kleur, count(*) as n', $where: where, $group: 'eerste_kleur', $order: 'n DESC', $limit: 12 }),
       q('voertuig', { $where: where, $limit: 1000 }),
     ]);
-    if (sample.error) { out.innerHTML = U.errorBox('Ophalen mislukt: ' + sample.error); return; }
-    if (!sample.length) { out.innerHTML = '<section class="card"><p class="muted">Geen voertuigen gevonden voor deze zoekopdracht. Merk en model moeten exact overeenkomen met de RDW-schrijfwijze (bijv. "VOLKSWAGEN" en "GOLF").</p></section>'; return; }
+    if (sample.error) return { error: 'Ophalen mislukt: ' + sample.error };
+    if (!sample.length) return { empty: true };
 
     const total = cnt.error ? sample.length : num(cnt[0] && cnt[0].n);
     const totalAll = cntAll.error ? null : num(cntAll[0] && cntAll[0].n);
@@ -419,6 +421,19 @@
     const kleurItems = perKleur.error ? count('eerste_kleur') : perKleur.filter(r => r.eerste_kleur).map(r => ({ name: r.eerste_kleur, n: num(r.n), hl: self && r.eerste_kleur === self.v.eerste_kleur }));
     const label = [f.merk, f.model].filter(Boolean).join(' ').toUpperCase() + (f.van || f.tot ? ` (${f.van || '…'}–${f.tot || '…'})` : '');
 
+    return { f, self, sample, total, totalAll, prijs, massa, apkVerlopen, export_, terugroep, onlogisch, count,
+      gebrekTop, omschr, others, gPer, kPer, totG, totK, modelGpk, zonderGebreken, metKeuring,
+      fuelCount, co2, kw, verbruik, jaarItems, kleurItems, label };
+  }
+
+  async function runModelAnalysis(out, f, self) {
+    out.innerHTML = U.loading('Model analyseren…');
+    const st = await computeModelStats(f, self);
+    if (st.error) { out.innerHTML = U.errorBox(st.error); return; }
+    if (st.empty) { out.innerHTML = '<section class="card"><p class="muted">Geen voertuigen gevonden voor deze zoekopdracht. Merk en model moeten exact overeenkomen met de RDW-schrijfwijze (bijv. "VOLKSWAGEN" en "GOLF").</p></section>'; return; }
+    const { sample, total, totalAll, prijs, massa, apkVerlopen, export_, terugroep, onlogisch, count,
+      gebrekTop, omschr, others, gPer, kPer, totG, totK, modelGpk, zonderGebreken, metKeuring,
+      fuelCount, co2, kw, verbruik, jaarItems, kleurItems, label } = st;
     let compare = '';
     if (self) {
       const sKw = self.kw, sCo2 = self.co2;
@@ -431,8 +446,8 @@
       };
       compare = `<section class="card"><h2>Deze auto vs. gemiddelde ${esc(label)}</h2>
         <div class="table-wrap"><table class="data compare"><thead><tr><th></th><th class="num">${esc(RDW.formatKenteken(self.kenteken))}</th><th class="num">Gemiddeld</th><th class="num">Verschil</th></tr></thead><tbody>
-        ${row('Gebreken per keuring', self.gebrekenPerKeuring, modelGpk, x => fmtNum(x, 2), true)}
-        ${row('Aantal keuringsmeldingen', kPer[self.kenteken] ?? self.history.length, metKeuring ? totK / metKeuring : null, x => fmtNum(x, 1), null)}
+        ${row('Mankementen per APK', self.gebrekenPerKeuring, modelGpk, x => fmtNum(x, 2), true)}
+        ${row('Aantal APK-keuringen', kPer[self.kenteken] ?? self.history.length, metKeuring ? totK / metKeuring : null, x => fmtNum(x, 1), null)}
         ${row('Catalogusprijs', num(self.v.catalogusprijs), prijs, fmtEuro, null)}
         ${row('Vermogen (kW)', sKw, kw, x => fmtNum(x), false)}
         ${row('CO₂ (g/km)', sCo2, co2, x => fmtNum(x), true)}
@@ -446,16 +461,16 @@
       <div class="stats bento">
         ${U.stat('Op kenteken', fmtNum(total), totalAll && totalAll !== total ? `${fmtNum(totalAll)} van dit model in totaal` : esc(label))}
         ${U.stat('Gem. catalogusprijs', fmtEuro(prijs))}
-        ${U.stat('Gebreken per keuring', modelGpk != null ? fmtNum(modelGpk, 2) : '', `${fmtNum(totG)} gebreken / ${fmtNum(totK)} keuringen`)}
-        ${U.stat('Foutloos door APK', metKeuring ? Math.round(zonderGebreken / metKeuring * 100) + '%' : '', 'auto\'s zonder geregistreerde gebreken')}
+        ${U.stat('Mankementen per APK', modelGpk != null ? fmtNum(modelGpk, 1) : '', 'gemiddeld per keuring')}
+        ${U.stat('Altijd zonder mankementen', metKeuring ? Math.round(zonderGebreken / metKeuring * 100) + '%' : '', 'van de auto\'s')}
         ${U.stat('APK verlopen', apkVerlopen.toFixed(1) + '%', 'in steekproef')}
         ${U.stat('Open terugroepactie', terugroep.toFixed(1) + '%')}
         ${U.stat('Geëxporteerd', export_.toFixed(1) + '%')}
-        ${U.stat('Tellerstand onlogisch', onlogisch.toFixed(1) + '%')}
+        ${U.stat('Kilometerstand onlogisch', onlogisch.toFixed(1) + '%')}
       </div>
       ${compare}
       <div class="grid-2">
-        <section class="card"><h2>Meest voorkomende APK-gebreken</h2><p class="sub">Bij ${esc(label)}, steekproef van ${others.length} auto's</p>
+        <section class="card"><h2>Wat vindt de APK het vaakst bij dit model?</h2><p class="sub">Bij ${esc(label)}, steekproef van ${others.length} auto's</p>
           ${gebrekTop.error ? U.errorBox(gebrekTop.error) : U.bars(gebrekTop.map(g => ({ name: (omschr[g.gebrek_identificatie] || {}).gebrek_omschrijving || g.gebrek_identificatie, n: num(g.n) })))}</section>
         <section class="card"><h2>Registraties per bouwjaar</h2><p class="sub">${esc([f.merk, f.model].filter(Boolean).join(' ').toUpperCase())}, alle jaren</p>${U.columns(jaarItems)}</section>
         <section class="card"><h2>Kleuren</h2>${U.bars(kleurItems, { pct: true, total })}</section>
@@ -474,7 +489,7 @@
   async function comparePage(el, list) {
     list = (list || []).map(RDW.normalizeKenteken).filter(Boolean).slice(0, 4);
     const inputs = [0, 1, 2, 3].map(i => `<div class="plate-input small"><span class="nl">NL</span><input name="k${i}" value="${esc(list[i] ? RDW.formatKenteken(list[i]) : '')}" placeholder="AB-12-CD" maxlength="10" autocomplete="off"></div>`).join('');
-    el.innerHTML = `<section class="card"><h2>Kentekens vergelijken</h2><p class="sub">Zet tot vier auto's naast elkaar: specificaties, APK-gebreken, terugroepacties en meer.</p>
+    el.innerHTML = `<section class="card"><h2>Auto's vergelijken</h2><p class="sub">Twijfel je tussen een paar auto's? Typ tot vier kentekens en zie welke het beste scoort.</p>
       <form id="cmpForm" class="form-row">${inputs}<button class="btn">Vergelijk</button></form></section><div id="cmpOut"></div>`;
     el.querySelector('#cmpForm').addEventListener('submit', ev => {
       ev.preventDefault();
@@ -483,14 +498,15 @@
     });
     if (!list.length) return;
     const out = el.querySelector('#cmpOut');
-    out.innerHTML = U.loading('Gegevens ophalen…');
-    const all = await Promise.all(list.map(k => RDW.fetchAllForKenteken(k).then(d => d.voertuig.rows.length ? summarize(d) : { kenteken: k, missing: true }).catch(e => ({ kenteken: k, missing: true, error: e.message }))));
+    out.innerHTML = U.loading('Auto\'s ophalen en rapporten opstellen…');
+    const all = await Promise.all(list.map(k => RDW.fetchAllForKenteken(k).then(async d => { if (!d.voertuig.rows.length) return { kenteken: k, missing: true }; const c = summarize(d); c.rapport = await Report.compute(c, d); return c; }).catch(e => ({ kenteken: k, missing: true, error: e.message }))));
     const cars = all.filter(c => !c.missing);
     const missing = all.filter(c => c.missing);
     if (!cars.length) { out.innerHTML = U.errorBox('Geen van de kentekens gevonden.'); return; }
 
     // [label, waarde-functie, opmaak, richting: 1 = hoger beter, -1 = lager beter, 0 = neutraal]
     const rows = [
+      ['Rapportcijfer', c => c.rapport ? c.rapport.total : null, (x, c) => `<span class="score-inline ${c.rapport.verdict.cls}">${Report.scoreText(x)}</span> ${esc(c.rapport.verdict.label)}`, 1],
       ['Merk & model', c => c.titel, esc, 0],
       ['Bouwjaar', c => c.bouwjaar, String, 1],
       ['Brandstof', c => c.brandstof, esc, 0],
@@ -498,7 +514,7 @@
       ['Inrichting', c => c.v.inrichting, esc, 0],
       ['Vermogen (pk)', c => c.pk, x => fmtNum(x), 1],
       ['Cilinderinhoud (cc)', c => num(c.v.cilinderinhoud), x => fmtNum(x), 0],
-      ['Massa rijklaar (kg)', c => num(c.v.massa_rijklaar), x => fmtNum(x), -1],
+      ['Gewicht (kg)', c => num(c.v.massa_rijklaar), x => fmtNum(x), -1],
       ['Trekgewicht geremd (kg)', c => num(c.v.maximum_trekken_massa_geremd), x => fmtNum(x), 1],
       ['Catalogusprijs', c => num(c.v.catalogusprijs), fmtEuro, 0],
       ['CO₂ (g/km)', c => c.co2, x => fmtNum(x), -1],
@@ -507,13 +523,13 @@
       ['Euroklasse', c => c.euroklasse, esc, 0],
       ['Energielabel', c => c.v.zuinigheidsclassificatie, esc, 0],
       ['APK geldig t/m', c => c.apk ? c.apk.getTime() : null, x => fmtDate(new Date(x)), 1],
-      ['APK-meldingen', c => c.history.length, x => fmtNum(x), 0],
-      ['Gebreken totaal', c => c.totaalGebreken, x => fmtNum(x), -1],
-      ['Gebreken per keuring', c => c.gebrekenPerKeuring, x => fmtNum(x, 2), -1],
-      ['Terugroepacties (open)', c => c.terugroepTotaal, (x, c) => `${fmtNum(x)}${c.terugroepOpen ? ` (${c.terugroepOpen})` : ''}`, -1],
-      ['Tellerstandoordeel', c => c.v.tellerstandoordeel, esc, 0],
+      ['APK-keuringen', c => c.history.length, x => fmtNum(x), 0],
+      ['Mankementen bij APK', c => c.totaalGebreken, x => fmtNum(x), 0],
+      ['Mankementen per APK', c => c.gebrekenPerKeuring, x => fmtNum(x, 2), -1],
+      ['Open terugroepacties', c => c.terugroepOpen, x => fmtNum(x), -1],
+      ['Kilometerstand (NAP)', c => c.v.tellerstandoordeel, esc, 0],
       ['Op naam sinds', c => c.eigenaarSinds ? c.eigenaarSinds.getTime() : null, x => fmtDate(new Date(x)), 0],
-      ['WAM verzekerd', c => c.v.wam_verzekerd, esc, 0],
+      ['Verzekerd', c => c.v.wam_verzekerd, esc, 0],
     ];
     const body = rows.map(([label, get, fmt, dir]) => {
       const vals = cars.map(get);
@@ -526,7 +542,7 @@
       <section class="card"><div class="table-wrap"><table class="data compare">
         <thead><tr><th></th>${cars.map(c => `<th><a href="#/k/${esc(c.kenteken)}"><span class="plate-badge">${esc(RDW.formatKenteken(c.kenteken))}</span></a></th>`).join('')}</tr></thead>
         <tbody>${body}</tbody></table></div>
-        <p class="small muted">Groen = beste waarde in de vergelijking.</p></section>`;
+        <p class="small muted">Groen = beste waarde. Begin bij het rapportcijfer bovenaan.</p></section>`;
   }
 
   /* ---------- Datasets / vrije query ---------- */
@@ -564,8 +580,8 @@
   function searchHero(k) {
     const recent = U.getRecent();
     return `<section class="search-hero${k ? ' compact' : ''}">
-      ${k ? '' : `<span class="eyebrow">RDW Open Data · live</span><h1>Alles over elk Nederlands kenteken</h1>
-        <p>Voertuiggegevens, volledige APK-historie met gebreken, terugroepacties en een vergelijking met hetzelfde type auto.</p>`}
+      ${k ? '' : `<span class="eyebrow">Gratis · officiële RDW-gegevens</span><h1>Is het een goede auto?</h1>
+        <p>Typ het kenteken en krijg direct een rapportcijfer, alle APK-keuringen en tips voor als je hem wilt kopen.</p>`}
       <form class="plate-form" id="plateForm">
         <div class="plate-input"><span class="nl"><span class="stars">★</span>NL</span>
           <input id="plate" name="kenteken" placeholder="XX-123-X" maxlength="10" autocomplete="off" spellcheck="false" value="${esc(k ? RDW.formatKenteken(k) : '')}" aria-label="Kenteken"></div>
@@ -590,14 +606,14 @@
   function homePage(el) {
     el.innerHTML = searchHero('') + `
       <div class="features">
-        <a class="feature" href="#/"><b>APK-historie</b><span>Elke keuring met datum, nieuwe vervaldatum en alle geconstateerde gebreken.</span></a>
-        <a class="feature" href="#/model"><b>Zelfde type vergelijken</b><span>Hoe scoort deze auto t.o.v. hetzelfde model en bouwjaar? Gebreken, prijs, CO₂.</span></a>
-        <a class="feature" href="#/vergelijk"><b>Naast elkaar</b><span>Zet tot vier kentekens naast elkaar en zie direct wie wint.</span></a>
-        <a class="feature" href="#/datasets"><b>Alle RDW-data</b><span>Terugroepacties, assen, carrosserie, brandstof — en een vrije query-tool.</span></a>
+        <a class="feature" href="#/"><b>Rapportcijfer</b><span>Eén cijfer van 1 tot 10, met in gewone taal wat goed is en waar je op moet letten.</span></a>
+        <a class="feature" href="#/model"><b>APK-geschiedenis</b><span>Elke keuring sinds 2018 en wat er gerepareerd moest worden. Beter of slechter dan andere auto's van hetzelfde type?</span></a>
+        <a class="feature" href="#/vergelijk"><b>Auto's vergelijken</b><span>Twijfel je tussen een paar auto's? Zet ze naast elkaar en zie welke het beste scoort.</span></a>
+        <a class="feature" href="#/datasets"><b>Voor experts</b><span>Zelf zoeken in alle RDW-gegevens.</span></a>
       </div>`;
     bindSearch(el);
     el.querySelector('#plate').focus();
   }
 
-  window.Views = { homePage, kentekenPage, comparePage, modelAnalysis, datasetsPage, summarize };
+  window.Views = { homePage, kentekenPage, comparePage, modelAnalysis, datasetsPage, summarize, computeModelStats, defaultModelFilter, gebrekMap };
 })();

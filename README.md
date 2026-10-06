@@ -5,6 +5,7 @@ Een eigen "CarScanner": zoek elk Nederlands kenteken op en zie alles wat de
 
 ## Functies
 
+- **Rapportcijfer (1–10)**: elk kenteken krijgt automatisch een rapport met een eindcijfer, deelcijfers (APK-keuringen, kilometerstand, papieren & veiligheid, betrouwbaarheid van het model, leeftijd & eigenaar, milieu), plus- en minpunten in gewone taal, koopadvies en een print/PDF-knop. Het cijfer vergelijkt de auto met andere auto's van hetzelfde merk, model en bouwjaar.
 - **Kentekencheck**: merk/model, kleur, leeftijd, vermogen (kW/pk), catalogusprijs, BPM, gewichten, energielabel, WAM-status, export-, taxi- en tellerstandindicatoren.
 - **APK-historie**: tijdlijn van alle keuringsmeldingen (met nieuwe vervaldatum) en alle geconstateerde gebreken in leesbare tekst, plus gebreken per jaar en de meest voorkomende gebreken.
 - **Terugroepacties**: status per actie, met omschrijving, risico en oplossing.

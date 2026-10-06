@@ -11,7 +11,7 @@
     let nav = 'home';
 
     if (parts[0] === 'k' && parts[1]) {
-      Views.kentekenPage(app, parts[1], parts[2] || 'overzicht');
+      Views.kentekenPage(app, parts[1], parts[2] || 'rapport');
     } else if (parts[0] === 'vergelijk') {
       nav = 'vergelijk';
       Views.comparePage(app, (parts[1] || '').split(','));
