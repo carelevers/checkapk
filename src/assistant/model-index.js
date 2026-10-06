@@ -1,13 +1,18 @@
 /**
  * Merken en modellen uit het RDW-register herkennen in een vrij getypte vraag.
  *
- * Bewust in kleine stappen, omdat één grote "alle merken × modellen"-query te zwaar is voor de API:
- *  1. merkenlijst (één lichte query; bij een fout een ingebouwde lijst),
+ * Bewust in kleine stappen, omdat query's over het hele register (alle merken of alle modellen
+ * groeperen) tientallen seconden duren of een 500-fout geven:
+ *  1. merk: ingebouwde lijst; alleen onbekende merken gericht in het register opzoeken,
  *  2. modellen per merk, pas als dat merk in de vraag voorkomt,
  *  3. modellen zonder merk ("golf 2015"): alleen de woorden uit de vraag opzoeken.
  */
 import { inList, lit, query } from '../api/rdw-client.js';
 import { normalizeText, num, titleCase } from '../lib/format.js';
+import { cacheGet, cacheSet } from '../lib/storage.js';
+
+/** Modellenlijsten veranderen nauwelijks: een week in de browser bewaren. */
+const WEEK_MS = 7 * 24 * 3600 * 1000;
 
 /**
  * @typedef {object} Subject  Een herkend merk, eventueel met model
@@ -25,13 +30,20 @@ export const MERK_ALIASES = {
   chevy: 'CHEVROLET', citroen: 'CITROEN', skoda: 'SKODA', 'rolls royce': 'ROLLS ROYCE',
 };
 
-/** Vangnet als de merkenlijst niet opgehaald kan worden (RDW-schrijfwijze). */
-const FALLBACK_MERKEN = ['VOLKSWAGEN', 'OPEL', 'PEUGEOT', 'RENAULT', 'TOYOTA', 'FORD', 'KIA', 'CITROEN', 'BMW',
+/**
+ * Bekende merken (RDW-schrijfwijze), op volgorde van populariteit. Hiermee wordt een merk direct
+ * herkend, zonder RDW-verzoek. Onbekende merken worden alsnog in het register opgezocht.
+ */
+export const KNOWN_MERKEN = ['VOLKSWAGEN', 'OPEL', 'PEUGEOT', 'RENAULT', 'TOYOTA', 'FORD', 'KIA', 'CITROEN', 'BMW',
   'MERCEDES-BENZ', 'AUDI', 'SKODA', 'VOLVO', 'NISSAN', 'HYUNDAI', 'FIAT', 'SEAT', 'MAZDA', 'SUZUKI', 'TESLA',
   'MINI', 'DACIA', 'MITSUBISHI', 'HONDA', 'LAND ROVER', 'JEEP', 'PORSCHE', 'ALFA ROMEO', 'LEXUS', 'SMART', 'DS',
   'MG', 'BYD', 'POLESTAR', 'CUPRA', 'SUBARU', 'CHEVROLET', 'JAGUAR', 'DAIHATSU', 'LANCIA', 'SAAB', 'CHRYSLER',
   'DODGE', 'LYNK & CO', 'MASERATI', 'FERRARI', 'LAMBORGHINI', 'BENTLEY', 'ROLLS ROYCE', 'ALPINE', 'ABARTH',
-  'SSANGYONG', 'ISUZU', 'IVECO', 'MAN', 'DAF', 'SCANIA', 'XPENG', 'NIO', 'ZEEKR', 'LEAPMOTOR', 'ORA'];
+  'SSANGYONG', 'KGM', 'ISUZU', 'IVECO', 'MAN', 'DAF', 'SCANIA', 'XPENG', 'NIO', 'ZEEKR', 'LEAPMOTOR', 'ORA',
+  'AIWAYS', 'GENESIS', 'INFINITI', 'CADILLAC', 'LINCOLN', 'ASTON MARTIN', 'MCLAREN', 'LOTUS', 'MORGAN', 'TRIUMPH',
+  'ROVER', 'MG ROVER', 'DAEWOO', 'CHEVROLET DAEWOO', 'PIAGGIO', 'LIGIER', 'MICROCAR', 'AIXAM', 'VESPA', 'YAMAHA',
+  'KAWASAKI', 'HARLEY-DAVIDSON', 'DUCATI', 'KTM', 'BMW I', 'SERES', 'JAECOO', 'OMODA', 'SMART #', 'FISKER',
+].map((merk, i, all) => ({ merk, n: all.length - i }));
 
 /** Woorden die nooit als merk/model herkend mogen worden. */
 export const STOPWORDS = new Set(['en', 'van', 'de', 'het', 'een', 'met', 'voor', 'na', 'tot', 'per', 'apk', 'auto', 'autos',
@@ -40,17 +52,41 @@ export const STOPWORDS = new Set(['en', 'van', 'de', 'het', 'een', 'met', 'voor'
 /** Komt `key` als los woord (of woordgroep) voor in `text`? Beide genormaliseerd. */
 export const containsWord = (text, key) => (' ' + text + ' ').includes(' ' + key + ' ');
 
-/** @type {Promise<Merk[]>|null} */
-let merkenPromise = null;
-
-/** Alle merken met het aantal auto's; valt terug op een ingebouwde lijst. */
-export function getMerken() {
-  if (!merkenPromise) {
-    merkenPromise = query('voertuig', { $select: 'merk, count(*) as n', $group: 'merk', $order: 'n DESC', $limit: 2000 })
-      .then((rows) => rows.filter((r) => r.merk).map((r) => ({ merk: r.merk, n: num(r.n) || 0 })))
-      .catch(() => FALLBACK_MERKEN.map((merk, i) => ({ merk, n: FALLBACK_MERKEN.length - i })));
+/** Woorden en woordgroepen (1–3 woorden) uit een genormaliseerde tekst, zonder stopwoorden en jaartallen. @param {string} text */
+function candidatePhrases(text) {
+  const words = text.split(' ').filter((w) => w && w !== '§');
+  const out = new Set();
+  for (let len = 3; len >= 1; len--) {
+    for (let i = 0; i + len <= words.length; i++) {
+      const phrase = words.slice(i, i + len).join(' ');
+      if (phrase.length < 2 || STOPWORDS.has(phrase) || /^(19|20)\d\d$/.test(phrase) || !/[a-z]/.test(phrase)) continue;
+      out.add(phrase.toUpperCase());
+    }
   }
-  return merkenPromise;
+  return [...out].slice(0, 25);
+}
+
+/**
+ * Zoekt een merk in de tekst: eerst in de ingebouwde lijst (direct), anders gericht in het register
+ * (alleen de woorden uit de vraag, dus een lichte query).
+ * @param {string} text genormaliseerde tekst
+ * @returns {Promise<{merk: string, key: string}|null>}
+ */
+export async function findMerkInText(text) {
+  const known = findMerk(KNOWN_MERKEN, text);
+  if (known) return known;
+  const cands = candidatePhrases(text);
+  if (!cands.length) return null;
+  const cacheKey = 'merk.' + cands.join('|');
+  let found = cacheGet(cacheKey, WEEK_MS);
+  if (!found) {
+    try {
+      const rows = await query('voertuig', { $select: 'merk, count(*) as n', $where: 'merk in' + inList(cands), $group: 'merk', $order: 'n DESC', $limit: 20 });
+      found = rows.filter((r) => (num(r.n) || 0) >= 20).map((r) => ({ merk: r.merk, n: num(r.n) || 0 }));
+      cacheSet(cacheKey, found);
+    } catch { return null; }
+  }
+  return findMerk(found, text);
 }
 
 /**
@@ -82,8 +118,13 @@ const modelsCache = new Map();
 export function modelsOfMerk(merk) {
   let p = modelsCache.get(merk);
   if (!p) {
-    p = query('voertuig', { $select: 'handelsbenaming, count(*) as n', $where: 'merk=' + lit(merk), $group: 'handelsbenaming', $order: 'n DESC', $limit: 3000 })
-      .then((rows) => toModels(rows.filter((r) => (num(r.n) || 0) >= 10).map((r) => ({ ...r, merk }))));
+    const stored = cacheGet('models.' + merk, WEEK_MS);
+    p = stored ? Promise.resolve(stored) : query('voertuig', { $select: 'handelsbenaming, count(*) as n', $where: 'merk=' + lit(merk), $group: 'handelsbenaming', $order: 'n DESC', $limit: 3000 })
+      .then((rows) => {
+        const models = toModels(rows.filter((r) => (num(r.n) || 0) >= 10).map((r) => ({ ...r, merk })));
+        cacheSet('models.' + merk, models);
+        return models;
+      });
     p.catch(() => modelsCache.delete(merk));
     modelsCache.set(merk, p);
   }
@@ -95,17 +136,8 @@ export function modelsOfMerk(merk) {
  * @param {string} text genormaliseerde tekst @returns {Promise<Required<Subject>[]>}
  */
 export async function findModelsByWords(text) {
-  const words = text.split(' ').filter((w) => w && w !== '§');
-  const cands = new Set();
-  for (let len = 3; len >= 1; len--) {
-    for (let i = 0; i + len <= words.length; i++) {
-      const phrase = words.slice(i, i + len).join(' ');
-      if (phrase.length < 2 || STOPWORDS.has(phrase) || /^(19|20)\d\d$/.test(phrase) || !/[a-z]/.test(phrase)) continue;
-      cands.add(phrase.toUpperCase());
-    }
-  }
-  if (!cands.size) return [];
-  const list = [...cands].slice(0, 25);
+  const list = candidatePhrases(text);
+  if (!list.length) return [];
   const rows = await query('voertuig', {
     $select: 'merk, handelsbenaming, count(*) as n', $where: 'handelsbenaming in' + inList(list),
     $group: 'merk, handelsbenaming', $order: 'n DESC', $limit: 200,

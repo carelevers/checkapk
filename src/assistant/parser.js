@@ -1,6 +1,6 @@
 /** Laag 1 van "Vraag het": vragen herkennen met regels (werkt altijd, zonder AI). */
 import { normalizeText } from '../lib/format.js';
-import { containsWord, findMerk, findModelsByWords, getMerken, modelsOfMerk } from './model-index.js';
+import { containsWord, findMerkInText, findModelsByWords, modelsOfMerk } from './model-index.js';
 
 /** @typedef {import('./model-index.js').Subject} Subject */
 /**
@@ -55,7 +55,6 @@ export function parseYears(text) {
  * @param {string} question @returns {Promise<Plan>}
  */
 export async function parseQuestion(question) {
-  const merken = await getMerken();
   let text = normalizeText(question);
   /** @type {Subject[]} */
   const subjects = [];
@@ -63,7 +62,7 @@ export async function parseQuestion(question) {
 
   // Merken + modellen; langste naam eerst ("c3 picasso" vóór "c3")
   for (let guard = 0; guard < 4; guard++) {
-    const mk = findMerk(merken, text);
+    const mk = await findMerkInText(text);
     if (!mk) break;
     consume(mk.key);
     const models = (await modelsOfMerk(mk.merk)).filter((m) => containsWord(text, m.key))

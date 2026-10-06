@@ -28,3 +28,23 @@ export function addRecent(item) {
 export const getTheme = () => read(THEME_KEY);
 /** @param {'light'|'dark'} theme */
 export const setTheme = (theme) => write(THEME_KEY, theme);
+
+const CACHE_PREFIX = 'checkapk.cache.';
+
+/**
+ * Leest een gecachete waarde, of null als die ontbreekt of ouder is dan maxAgeMs.
+ * @param {string} key @param {number} maxAgeMs
+ */
+export function cacheGet(key, maxAgeMs) {
+  try {
+    const raw = read(CACHE_PREFIX + key);
+    if (!raw) return null;
+    const { t, v } = JSON.parse(raw);
+    return Date.now() - t < maxAgeMs ? v : null;
+  } catch { return null; }
+}
+
+/** Bewaart een waarde met tijdstempel (stil mislukken als de opslag vol is). @param {string} key @param {unknown} value */
+export function cacheSet(key, value) {
+  write(CACHE_PREFIX + key, JSON.stringify({ t: Date.now(), v: value }));
+}

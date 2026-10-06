@@ -50,7 +50,9 @@ Regels:
   Het rapportcijfer (`domain/report-score.js`) staat hier, met de gewichten bovenaan het bestand.
 - **`api/`** is de enige plek die met de RDW praat (via `rdw-client.js`). Identieke verzoeken worden
   in het geheugen gecachet; bij een tijdelijke serverfout (500/502/503/504) wordt één keer opnieuw geprobeerd.
-  Vermijd zware query's over het hele register (bijv. groeperen op merk × model): die geven een 500-fout.
+  Vermijd zware query's over het hele register (groeperen zonder filter, bijv. alle merken): die duren
+  tientallen seconden of geven een 500-fout. Filter altijd op merk/model, of bewaar de uitkomst met
+  `cacheGet`/`cacheSet` (`lib/storage.js`) in de browser.
 - **`services/`** combineert API-verzoeken met domeinlogica (bijv. vergelijkgroep kiezen → statistieken
   ophalen → rapport berekenen). Resultaten per voertuig worden met een `WeakMap` gecachet.
 - **`ui/`** maakt HTML-strings. Alle data uit de API gaat door `esc()`. De kentekenplaat (`ui/plate.js`) is

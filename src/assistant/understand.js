@@ -1,6 +1,6 @@
 /** Een vraag begrijpen: eerst met regels, en alleen als dat niet genoeg is met de lokale AI. */
 import { normalizeText } from '../lib/format.js';
-import { findMerk, getMerken, modelsOfMerk } from './model-index.js';
+import { findMerkInText, modelsOfMerk } from './model-index.js';
 import { chat } from './ollama.js';
 import { TOPIC_LABELS, isComplete, parseQuestion } from './parser.js';
 
@@ -33,10 +33,9 @@ async function askAiForPlan(question) {
 
 /** Koppelt de merk/model-tekst van de AI aan echte RDW-namen. @returns {Promise<Plan>} */
 async function resolveAiPlan(raw) {
-  const merken = await getMerken();
   const subjects = [];
   for (const a of raw.autos || []) {
-    const mk = findMerk(merken, normalizeText(a.merk)) || findMerk(merken, normalizeText(a.merk + ' ' + a.model));
+    const mk = (await findMerkInText(normalizeText(a.merk))) || (await findMerkInText(normalizeText(a.merk + ' ' + a.model)));
     if (!mk) continue;
     const key = normalizeText(a.model).replace(new RegExp('^' + normalizeText(mk.merk) + ' '), '');
     if (!key) { subjects.push({ merk: mk.merk }); continue; }
@@ -51,13 +50,13 @@ async function resolveAiPlan(raw) {
 
 /**
  * @param {string} question
- * @param {boolean} aiAvailable
+ * @param {Promise<boolean>} aiAvailable wordt alleen afgewacht als de AI echt nodig is
  * @returns {Promise<Plan & {via: string}>}
  */
 export async function understand(question, aiAvailable) {
   const rule = await parseQuestion(question);
   // Snel pad: als de regels de vraag al volledig begrijpen, niet op de (trage) lokale AI wachten.
-  if (!aiAvailable || isComplete(rule)) return { ...rule, via: 'zoekbalk' };
+  if (isComplete(rule) || !(await aiAvailable)) return { ...rule, via: 'zoekbalk' };
   try {
     const ai = await resolveAiPlan(await askAiForPlan(question));
     return {

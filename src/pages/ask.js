@@ -58,11 +58,11 @@ async function answer(page, question) {
   const body = /** @type {HTMLElement} */ (card.querySelector('.q-body'));
 
   const t0 = performance.now();
-  const ai = await checkAI();
-  if (ai.ok) warmUp();
+  const aiCheck = checkAI();
+  aiCheck.then((st) => { if (st.ok) warmUp(); });
   let plan;
   try {
-    plan = await understand(question, ai.ok);
+    plan = await understand(question, aiCheck.then((st) => st.ok));
   } catch (e) {
     body.innerHTML = `${errorBox('De RDW-server reageert nu niet goed. Probeer het zo nog eens.')}
       <p class="small muted">Technische melding: ${esc(e.message)}</p>
@@ -77,6 +77,7 @@ async function answer(page, question) {
   }
 
   const tPlan = performance.now();
+  const ai = await aiCheck;
   const jobs = buildJobs(plan);
   body.innerHTML = `${planChips(plan)}
     ${ai.ok ? `<div class="ai-summary"><span class="ai-label">AI-samenvatting (${esc(AI.model)})</span><div class="ai-text">${loading('Wacht op de RDW-gegevens…')}</div></div>` : ''}

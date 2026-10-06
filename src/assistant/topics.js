@@ -9,6 +9,7 @@ import { countBy, fmtNum, num, parseDate, titleCase } from '../lib/format.js';
 import { fetchGenerations } from '../services/model-stats.js';
 import { barChart, columnChart } from '../ui/charts.js';
 import { errorBox } from '../ui/html.js';
+import { cacheGet, cacheSet } from '../lib/storage.js';
 import { subjectLabel } from './model-index.js';
 
 /** @typedef {import('./model-index.js').Subject} Subject */
@@ -175,8 +176,14 @@ const TOPIC_HANDLERS = {
 /** Onderwerpen zonder merk/model. */
 const GLOBAL_HANDLERS = {
   async topmerken(p) {
+    // Telt alle personenauto's: zwaar voor de RDW, dus een dag in de browser bewaren
     const where = ["voertuigsoort='Personenauto'", ...yearRange(p.van, p.tot)].join(' AND ');
-    const rows = await query('voertuig', { $select: 'merk, count(*) as n', $where: where, $group: 'merk', $order: 'n DESC', $limit: 15 });
+    const cacheKey = 'topmerken.' + where;
+    let rows = cacheGet(cacheKey, 24 * 3600 * 1000);
+    if (!rows) {
+      rows = await query('voertuig', { $select: 'merk, count(*) as n', $where: where, $group: 'merk', $order: 'n DESC', $limit: 15 });
+      cacheSet(cacheKey, rows);
+    }
     const items = rows.map((r) => ({ name: titleCase(r.merk), n: num(r.n) || 0 }));
     return section(`Populairste automerken${yearsLabel(p)}`, 'Personenauto\'s op kenteken', barChart(items), barCsv(['merk', 'aantal'], items));
   },
